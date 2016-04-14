@@ -11,7 +11,19 @@
 /** Scale a floating point 'val between 'low' and 'high' to the PWM output range of [0,255] */
 uint8_t scale_pwm(float val,float low, float high);
 
-/*! Control class. Handles the mode logic and either passses through control values in DIRECT mode, sets zeros in PASSIVE mode, or computes onboard in INDIRECT mode */
+/*! Low pass filter class. Accepts a single value and updates a new value as x_new = self.alpha*x_input + (1.0-self.alpha)*x_old */
+class lowPassFilter{
+public:
+  lowPassFilter();/*< Class constructor. Initializes alpha to 0.1 and x to zero. */
+  void set_alpha(float a);/*< Set the filter constant. Values of 0.1-0.2 are common. HIGHER values mean more SLUGGISH response of x_old */
+  float update(float x_input);/*!< Compute the new output and return it */
+  float get_x();/*!< Return the current value of the state */
+private:
+  float x; /*!< The internal state */
+  float alpha;/*!< The filter constant. Should be between 0 (always return old value) and 1 (always return newest value, unfiltered. */
+};
+
+/*! Control class. Handles the mode logic and either passes through control values in DIRECT mode, sets zeros in PASSIVE mode, or computes onboard in INDIRECT mode */
 class emilyControl{
 public:
   /** Constructor
@@ -34,8 +46,8 @@ public:
   uint8_t new_control();/*<! Return 1 if the control value has been updated */
 private:
   emilyStatus* status; /*<! Pointer to the global status object */
-  float rudder;
-  float throttle;
+  lowPassFilter rudder;/*<! Lowpass filter object: always low pass the rudder */
+  lowPassFilter throttle;/*<! Lowpass filter object: always low pass the throttle */
   uint8_t new_value;
   uint32_t millis_last;/*<! Mark the time of last computation for automatic control (INDIRECT mode) */
   controlPid rudder_pid;
