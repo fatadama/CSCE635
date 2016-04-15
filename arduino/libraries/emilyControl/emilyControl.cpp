@@ -5,24 +5,6 @@ uint8_t scale_pwm(float val,float low, float high){
   return uint8_t(((val-low)/(high-low))*255.0);
 }
 
-lowPassFilter::lowPassFilter(){
-  alpha = 0.1;
-  x = 0.0;
-}
-
-void lowPassFilter::set_alpha(float a){
-  alpha = a;
-}
-
-float lowPassFilter::update(float x_input){
-  x = alpha*x_input + (1.0-alpha)*x;
-  return x;
-}
-
-float lowPassFilter::get_x(){
-  return x;
-}
-
 emilyControl::emilyControl(emilyStatus*st){
   status = st;
   //rudder = 0.0;

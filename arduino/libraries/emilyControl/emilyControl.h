@@ -4,24 +4,13 @@
 #include <stdint.h>
 #include "emilyStatus.h"
 #include "controlPid.h"
+#include "lowPassFilter.h"
 
 /** Target automatic control rate execution in Hz */
 #define EMILYCONTROL_RATE_MILLIS 100
 
 /** Scale a floating point 'val between 'low' and 'high' to the PWM output range of [0,255] */
 uint8_t scale_pwm(float val,float low, float high);
-
-/*! Low pass filter class. Accepts a single value and updates a new value as x_new = self.alpha*x_input + (1.0-self.alpha)*x_old */
-class lowPassFilter{
-public:
-  lowPassFilter();/*< Class constructor. Initializes alpha to 0.1 and x to zero. */
-  void set_alpha(float a);/*< Set the filter constant. Values of 0.1-0.2 are common. HIGHER values mean more SLUGGISH response of x_old */
-  float update(float x_input);/*!< Compute the new output and return it */
-  float get_x();/*!< Return the current value of the state */
-private:
-  float x; /*!< The internal state */
-  float alpha;/*!< The filter constant. Should be between 0 (always return old value) and 1 (always return newest value, unfiltered. */
-};
 
 /*! Control class. Handles the mode logic and either passes through control values in DIRECT mode, sets zeros in PASSIVE mode, or computes onboard in INDIRECT mode */
 class emilyControl{

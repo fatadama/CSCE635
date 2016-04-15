@@ -15,3 +15,6 @@ add_executable(convertGPS ../testFunctions/convertGPS_test.cpp ../arduino/librar
 add_executable(convertTime ../testFunctions/convertTime_test.cpp ../arduino/libraries/emilyGPS/emilyGPS.cpp ../arduino/libraries/emilyStatus/emilyStatus.cpp)
 
 add_executable(testVenusCommands ../testFunctions/testVenusCommands.cpp ../arduino/libraries/emilyGPS/emilyGPS.cpp ../arduino/libraries/emilyStatus/emilyStatus.cpp)
+
+include_directories(../arduino/libraries/controlPid ../arduino/libraries/lowPassFilter)
+add_executable(pidTest ../testFunctions/pid_test.cpp ../arduino/libraries/controlPid/controlPid.cpp ../arduino/libraries/lowPassFilter/lowPassFilter.cpp)
