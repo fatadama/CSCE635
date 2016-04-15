@@ -46,8 +46,14 @@ void emilyGPS::parseSentence(){
     if (strcmp(field,"W")==0){
       lon = -lon;
     }
-    // set the status object
-    status->gpsNow.set(lat,lon,timei);
+    // read the speed in knots
+    getField(field,7);
+    float v = atof(field);
+    // read the heading in "course made good"
+    getField(field,8);
+    float hdg = atof(field);
+    // set the status object including speed and heading
+    status->gpsNow.set(lat,lon,timei,v,hdg);
   }
 }
 

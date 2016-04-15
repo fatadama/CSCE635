@@ -13,12 +13,21 @@ gpsData::gpsData(){
   t = 0;
   x = 0.0;
   y = 0.0;
+  v = 0.0;
+  hdg = 0.0;
   lat_home = GPS_HOME_LAT_DEFAULT;
   lon_home = GPS_HOME_LON_DEFAULT;
 }
 
 void gpsData::set(double lati,double loni,double ti){
   set( int32_t(lati*1e7),int32_t(loni*1e7), ti);
+}
+
+void gpsData::set(int32_t lati, int32_t loni, double ti, double vi, double hdgi){
+  v = (vi*KNOTS2MS);
+  hdg = (hdgi*DEG2RAD);
+  // call the base function
+  set(lati,loni,ti);
 }
 
 void gpsData::set(int32_t lati,int32_t loni,double ti){

@@ -13,6 +13,10 @@
 #define CONTROL_MODE_INDIRECT 1
 /** passive control mode - initialized, no commands received */
 #define CONTROL_MODE_PASSIVE 2
+/** conversion factor knots to meters/s */
+#define KNOTS2MS 0.514444
+/** conversion factor degrees to radians */
+#define DEG2RAD 0.0174533
 
 #define GPS_HOME_LAT_DEFAULT 306200000
 #define GPS_HOME_LON_DEFAULT -963400000
@@ -39,6 +43,8 @@ public:
   double t; /*!< Time (sec) */
   double x; /*!< X = north (meters) data in north-east earth frame. Defined relative to a fixed point near USA for better precision. */
   double y; /*!< Y = east (meters) data in north-east earth frame. Defined relative to a fixed point near USA for better precision. */
+  double v;/*!< velocity in meters/sec */
+  double hdg;/*!< heading in radians */
   bool init; /*!< Status indicator so we can tell if the value of a GPS object has been set */
   /** Set the value of GPS data object and compute x-y
    *
@@ -47,6 +53,15 @@ public:
    * @param[in] ti time from GPS in seconds
    */
   void set(double lati,double longi,double ti);
+  /** Set the value of GPS data object, compute X-Y position, and set velocity and heading
+   *
+   * @param[in] lati latitutde reading in DEGREES
+   * @param[in] loni longitude reading in DEGREES
+   * @param[in] ti time from GPS in seconds
+   * @param[in] v speed from GPS in knots
+   * @param[in] hdg "course made good" from GPS in degrees
+   */
+   void set(int32_t lati, int32_t longi, double ti, double vi, double hdgi);
   int8_t is_new();/*<! Return the current value of 'new' */
   /** Set the value of GPS data object and compute x-y.
    *
