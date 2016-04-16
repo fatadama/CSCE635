@@ -15,8 +15,8 @@ public:
    * @param[in] st pointer to the global status object
    */
   emilyGPS(emilyStatus*st);
-  void parseBytes(char ch);/** Parse a sequence of raw bytes from serial port */
-  void parseSentence();/** Parse a sentence from the GPS */
+  int16_t parseBytes(char ch);/** Parse a sequence of raw bytes from serial port. Return values: -1 == got a non-PMC message, 0 == no message, 1 == not a PMC message */
+  int16_t parseSentence();/** Parse a sentence from the GPS */
   void misc_tasks();/** Placeholder for miscellaneous tasks */
   /** Send the command to set the baud rate. Returns a string
    *
@@ -37,7 +37,7 @@ public:
 private:
   char sentence[sentenceSize];/** Buffer that holds incoming strings */
   emilyStatus* status; /** Pointer to the global status object */
-  int parseCounter; /** Counts the position within the buffer */
+  int16_t parseCounter; /** Counts the position within the buffer */
   void getField(char* buffer, int index);/** Read a field from sentence */
   uint8_t compute_checksum(uint8_t*buffer,uint8_t len);/** Compute the checksum for Venus638FLPx binary commands */
 };

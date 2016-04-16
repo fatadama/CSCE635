@@ -8,7 +8,7 @@ emilyGPS::emilyGPS(emilyStatus*st){
   parseCounter = 0;
 }
 
-void emilyGPS::parseBytes(char ch){
+int16_t emilyGPS::parseBytes(char ch){
   if (ch != '\n' && parseCounter < sentenceSize){
     sentence[parseCounter] = ch;
     parseCounter++;
@@ -18,11 +18,12 @@ void emilyGPS::parseBytes(char ch){
     sentence[parseCounter] = '\0';
     parseCounter = 0;
     // run parser function
-    parseSentence();
+    return(parseSentence());
   }
+  return 0;
 }
 
-void emilyGPS::parseSentence(){
+int16_t emilyGPS::parseSentence(){
   char field[sentenceSize];
   getField(field, 0);
   if (strcmp(field, "$GPRMC") == 0)
@@ -46,6 +47,8 @@ void emilyGPS::parseSentence(){
     if (strcmp(field,"W")==0){
       lon = -lon;
     }
+    status->gpsNow.set(lat,lon,timei);
+    /*
     // read the speed in knots
     getField(field,7);
     float v = atof(field);
@@ -54,6 +57,11 @@ void emilyGPS::parseSentence(){
     float hdg = atof(field);
     // set the status object including speed and heading
     status->gpsNow.set(lat,lon,timei,v,hdg);
+    */
+    return 1;
+  }
+  else{
+    return -1;
   }
 }
 

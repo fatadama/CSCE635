@@ -52,7 +52,7 @@ public:
    * @param[in] loni longitude reading in DEGREES
    * @param[in] ti time from GPS in seconds
    */
-  void set(double lati,double longi,double ti);
+  void set(double lati,double longi,float ti);
   /** Set the value of GPS data object, compute X-Y position, and set velocity and heading
    *
    * @param[in] lati latitutde reading in DEGREES
@@ -61,7 +61,7 @@ public:
    * @param[in] v speed from GPS in knots
    * @param[in] hdg "course made good" from GPS in degrees
    */
-   void set(int32_t lati, int32_t longi, double ti, double vi, double hdgi);
+  void set(int32_t lati, int32_t longi, float ti, float vi, float hdgi);
   int8_t is_new();/*<! Return the current value of 'new' */
   /** Set the value of GPS data object and compute x-y.
    *
@@ -71,7 +71,7 @@ public:
    * @param[in] loni longitude reading in units of (10^-7 degrees)
    * @param[in] ti time from GPS in seconds
    */
-  void set(int32_t lati,int32_t longi,double ti); /*!< Set the value of GPS data object and compute x-y. Uses long inputs to be compatible with comm protocol */
+  void set(int32_t lati,int32_t longi,float ti); /*!< Set the value of GPS data object and compute x-y. Uses long inputs to be compatible with comm protocol */
   void set_home(int32_t lat1,int32_t lon1); /*!< Change from default home lat/lon coordinates to new ones. Units are (10^-7 degrees) */
   void get(float*x,float*y);/*!< Return the current position state for control purposes */
 private:
