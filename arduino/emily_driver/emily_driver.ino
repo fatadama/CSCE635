@@ -30,12 +30,17 @@ SoftwareSerial gpsSerial(8, 9); // RX, TX (TX not used)
 #define THROTTLE_PIN 6
 
 emilyStatus stat;
+emilyStatus commstatus;
+emilyStatus controlstatus;
 /** GPS object */
-emilyGPS GPS(&stat);
+//emilyGPS GPS(&stat);
+emilyGPS GPS;
 /** communications parser object */
-commParser comm(&stat);
+//commParser comm(&stat);
+commParser comm(&commstatus);
 /** Control object */
-emilyControl control(&stat);
+//emilyControl control(&stat);
+emilyControl control(&controlstatus);
 
 uint32_t millis_next = 0;
 uint32_t millis_now = 0;
@@ -50,12 +55,18 @@ uint8_t pwm_throttle;
 // DEBUGGING VARIABLES
 float x,y;
 
-void configure_gps(){
+/** Configure the GPS: Send binary commands for a faster baud rate and sample rate
+ *  
+ *  Note: if the baud rate is ever changed from the default, you have to power down the GPS to apply a new baud rate, as the program always tries to connect at the default (9600) rate before changing the baud rate.
+ *  @param[in] baud: Target baud rate. 0 = 4800 baud, 1 = 9600, 2 = 19200, 3 = 38400, 4 = 57600, 5 = 115200
+ *  @param[in] sample: Target sample rate in Hz. Allowed values are [1,2,4,5,10,20]. 4,5,10 require a baud rate of 38400 or higher. 20 requires a baud rate of 57600?
+ */
+void configure_gps(int baud, int sample){
   uint8_t buffer[256];
   int len;
   gpsSerial.begin(GPS_DEFAULT_BAUD_RATE);
   // set GPS baud rate to 38400 baud, see docs of send_command_configure_serial_port
-  len = GPS.send_command_configure_serial_port(buffer,3);
+  len = GPS.send_command_configure_serial_port(buffer,baud);
   buffer[len] = 0;
   for(int j = 0;j<len;j++){
     gpsSerial.write(buffer[j]);
@@ -66,7 +77,7 @@ void configure_gps(){
   gpsSerial.begin(GPS_BAUD_RATE);
   delay(5000);
   // pack GPS message for faster sampling - 10 Hz target  
-  len = GPS.send_command_configure_position_rate(buffer,4);
+  len = GPS.send_command_configure_position_rate(buffer,sample);
   buffer[len] = 0;
   // write one byte at a time
   for(int j = 0;j<len;j++){
@@ -85,7 +96,7 @@ void setup()
   // open XBee serial port
   COMM_SERIAL.begin(9600);
   // set the GPS baud rate and sample rate
-  configure_gps();
+  configure_gps(3,10);
   while (gpsSerial.available()){
     uint8_t ch = gpsSerial.read();
     if(DEBUGGING){
@@ -129,6 +140,7 @@ void loop()
   }
   // call periodic functions
   GPS.misc_tasks();
+  GPS.sync(&stat);
   comm.misc_tasks(millis_now);
   control.misc_tasks(millis_now);
 
@@ -144,14 +156,29 @@ void loop()
   }*/
 
   // send any bytes in the transmit buffer
-  /*
   while(comm.bytes_to_send() > 0){
     COMM_SERIAL.write( comm.get_next_byte() );
   }
-  */
   
   // test GPS print
   if(DEBUGGING) {
+    /*
+    if (GPS.gpsNow.is_new()){
+      GPS.gpsNow.get(&x,&y);
+      Serial.print("*********************\n");
+      Serial.print("Time: ");
+      Serial.print(GPS.gpsNow.t);
+      Serial.print("Lat: ");
+      Serial.print(GPS.gpsNow.lat);
+      Serial.print(" Long: ");
+      Serial.print(GPS.gpsNow.lon);
+      Serial.print(" X: ");
+      Serial.print(x);
+      Serial.print(" Y: ");
+      Serial.print(y);
+      Serial.print("\n");
+    }
+    */
     if (stat.gpsNow.is_new()){
       stat.gpsNow.get(&x,&y);
       Serial.print("*********************\n");

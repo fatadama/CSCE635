@@ -3,8 +3,7 @@
 #include <string.h>
 #include "emilyGPS.h"
 
-emilyGPS::emilyGPS(emilyStatus*st){
-  status = st;
+emilyGPS::emilyGPS(){
   parseCounter = 0;
 }
 
@@ -47,8 +46,7 @@ int16_t emilyGPS::parseSentence(){
     if (strcmp(field,"W")==0){
       lon = -lon;
     }
-    status->gpsNow.set(lat,lon,timei);
-    /*
+    //gpsNow.set(lat,lon,timei);
     // read the speed in knots
     getField(field,7);
     float v = atof(field);
@@ -56,8 +54,7 @@ int16_t emilyGPS::parseSentence(){
     getField(field,8);
     float hdg = atof(field);
     // set the status object including speed and heading
-    status->gpsNow.set(lat,lon,timei,v,hdg);
-    */
+    gpsNow.set(lat,lon,timei,v,hdg);
     return 1;
   }
   else{
@@ -154,6 +151,15 @@ uint8_t emilyGPS::send_command_restart_cold(uint8_t*buffer){
   // end of message bytes
   buffer[20] = 0x0D; buffer[21] = 0x0A;
   return 22;
+}
+
+void emilyGPS::sync(emilyStatus*status){
+  if (gpsNow.is_new()){
+    status->gpsNow.set(gpsNow.lat,gpsNow.lon,gpsNow.t,gpsNow.v,gpsNow.hdg);
+    // HACK: call get() to make the gps data no longer new
+    float x,y;
+    gpsNow.get(&x,&y);
+  }
 }
 
 int32_t convertGPS(char* buffer){
