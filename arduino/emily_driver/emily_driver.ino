@@ -17,10 +17,15 @@
 SoftwareSerial gpsSerial(8, 9); // RX, TX (TX not used)
 #define GPS_BAUD_RATE 38400
 #define GPS_DEFAULT_BAUD_RATE 9600
+#define GPS_UPDATE_RATE 4
 /** period in microseconds at which to check the serial port */
 #define SERIAL_PERIOD_MICROS 10000
 /** set to true to enable debug output on serial port */
 #define DEBUGGING true
+/** XBee baud rate */
+#define XBEE_SERIAL_BAUD 9600
+/** Debugging serial baud rate */
+#define DEBUG_SERIAL_BAUD 9600
 
 /** serial port name to use: Serial is USB, Serial1 is the RX and TX pins */
 #define COMM_SERIAL Serial1
@@ -30,12 +35,12 @@ SoftwareSerial gpsSerial(8, 9); // RX, TX (TX not used)
 #define THROTTLE_PIN 6
 
 emilyStatus stat;
-emilyStatus commstatus;
+//emilyStatus commstatus;
 /** GPS object */
 emilyGPS GPS;
 /** communications parser object */
-//commParser comm(&stat);
-commParser comm(&commstatus);
+commParser comm;
+//commParser comm(&commstatus);
 /** Control object */
 emilyControl control;
 //emilyControl control(&controlstatus);
@@ -88,13 +93,23 @@ void configure_gps(int baud, int sample){
 void setup()
 {
   if(DEBUGGING){
-    Serial.begin(9600);
+    Serial.begin(DEBUG_SERIAL_BAUD);
     Serial.print("Initialized emilyGPS_test\n");
   }
   // open XBee serial port
-  COMM_SERIAL.begin(9600);
+  COMM_SERIAL.begin(XBEE_SERIAL_BAUD);
   // set the GPS baud rate and sample rate
-  configure_gps(3,10);
+  switch (GPS_BAUD_RATE){
+    case 38400:
+      configure_gps(3,GPS_UPDATE_RATE);
+      break;
+    case 57600:
+      configure_gps(4,GPS_UPDATE_RATE);
+      break;
+    case 115200:
+      configure_gps(5,GPS_UPDATE_RATE);
+      break;
+  }
   while (gpsSerial.available()){
     uint8_t ch = gpsSerial.read();
     if(DEBUGGING){
@@ -117,6 +132,8 @@ void setup()
 void loop()
 {
   millis_now = millis();
+  // update the comm status
+  //comm.update_status(&stat);
   // see if it's time to READ XBee serial
   if( millis_now >= serial_millis_next ){
     serial_millis_next += (SERIAL_PERIOD_MICROS/1000);
@@ -130,6 +147,8 @@ void loop()
       }
     }
   }
+  // copy comm status to main status
+  comm.sync_after_receive(&stat);
   /** See if new GPS available */
   if (gpsSerial.available())
   {
@@ -139,7 +158,12 @@ void loop()
   // call periodic functions
   GPS.misc_tasks();
   GPS.sync(&stat);
-  comm.misc_tasks(millis_now);
+  // update comm status
+  //comm.update_status(&stat);
+  comm.misc_tasks(millis_now,stat);
+  comm.sync(&stat);
+  // copy comm status to main status
+  //stat=comm.return_status();
   control.misc_tasks(millis_now,stat);
 
   // read the control values and write them
@@ -148,11 +172,16 @@ void loop()
     // read from control
     control.get_pwm(&pwm_rudder,&pwm_throttle);
     if(DEBUGGING){
-      Serial.print("*********************\n");
-      Serial.print("RUDDER: ");
+      //Serial.print("*********************\n");
+      Serial.print(" R: ");
       Serial.print(pwm_rudder);
-      Serial.print("THROTTLE: ");
+      Serial.print(" T: ");
       Serial.print(pwm_throttle);
+      Serial.print(" M: ");
+      Serial.print(stat.control_mode);
+      Serial.print(" S: ");
+      Serial.print(stat.comm_status);
+      Serial.print("\n");
     }
     /*
     // write out rudder

@@ -8,11 +8,11 @@
 #define ESP_HEADER1 127
 #define ESP_HEADER2 83
 
-// message IDs
+// message IDs - must be positive and different powers of 2
 #define MSG_GPS 1
 #define MSG_CONTROL 2
-#define MSG_COMMAND 3
-#define MSG_SET_PID 4
+#define MSG_COMMAND 4
+#define MSG_SET_PID 8
 
 // message lengths
 #define MSG_GPS_LEN 16

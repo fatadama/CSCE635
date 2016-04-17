@@ -18,9 +18,9 @@ class commParser
 {
 	public:
 		/** Class constructor, initializes counters to zero
-		  * @param[in] st: a pointer to a status class object
+		  * 
 		  */
-		commParser(emilyStatus*st);
+		commParser();
 		/** Feed new bytes received to the parser
 		  *
 		  */
@@ -33,8 +33,16 @@ class commParser
 		 *  @detail Check the time since last received message and update the status
 		 *					Send periodic messages
 		 *	@param[in] Current clock time in milliseconds
+		 * 	@param[in] Copy of the global status object
 		 */
-		void misc_tasks(uint32_t millis);
+		void misc_tasks(uint32_t millis,emilyStatus st);
+		/** Sync the global status object by setting the comm status variables to match the commParser values
+		 *
+		 * @brief Called after misc_tasks()
+		 */
+		void sync(emilyStatus*st);
+		/** Sync the global status object by setting the received throttle and rudder, and PID values if applicable */
+		void sync_after_receive(emilyStatus*st);
 		/** Function for getting the number of bytes to send over serial
 		 *
 		 */
@@ -47,7 +55,7 @@ class commParser
 		  *
 		  */
 		void handleMsg();
-		emilyStatus*status; /*!< system status class */
+		//emilyStatus*status; /*!< system status class */
 		uint32_t bad_checksums;/*!< counter for number of bad checksums received */
 		uint32_t bad_packets;/*!< counter for rejected packets. If this increments, we probably have a problem in the parser. */
 		uint32_t last_message_millis;/*!< last message receive time in millis */
@@ -56,6 +64,15 @@ class commParser
 		uint8_t send_buffer_counter;/*!< Counter for tracking the length of the send buffer */
 		uint8_t send_buffer_counter_helper;/*!< Counts how many bytes we've sent out of total */
 		uint32_t received_messages;/*!< Counts number of messages received. */
+		commStatus comm_status;/*!< commStatus enum defined in emilyStatus.h */
+		controlMode control_mode;/*!< controlMode enum defined in emilyStatus.h */
+		gpsData gpsCmd;/*!< Local variable for holding commanded GPS objects when received */
+		float control_rudder;
+		float control_throttle;
+		uint8_t received_msg_bitstring;/*!< Bitstring for holding which messages we have received between sequential calls to sync_after_receive() */
+		float Kp[2];
+		float Ki[2];
+		float Kd[2];
 };
 
 #endif

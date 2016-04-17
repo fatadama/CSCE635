@@ -22,35 +22,33 @@ emilyControl::emilyControl(){
 }
 
 void emilyControl::misc_tasks(uint32_t millis,emilyStatus status){
-  if (status.control_mode == CONTROL_MODE_PASSIVE){ // do nothing
-    // write out zeros
-    throttle.update(0.0);
-    rudder.update(0.0);
-    // FLAG that there is new data in the control object
-    new_value = 1;
-  }
-  else{
-    // check the time
-    if (millis - millis_last > EMILYCONTROL_RATE_MILLIS){
-      millis_last = millis;
-      if (status.control_mode == CONTROL_MODE_DIRECT){ //offboard control
-        // read from status object
-        throttle.update(status.control_throttle);
-        rudder.update(status.control_rudder);
-      }
-      if (status.control_mode == CONTROL_MODE_INDIRECT){ // automatic control
-        // set the gains if new values
-        // check if the GPS data are new
-        // copy local GPS
-        // perform smoothing or estimation
-        // compute PID control
-        // not implemented yet: write out zeros
-        throttle.update(0.0);
-        rudder.update(0.0);
-      }
+  // check the time
+  if (millis - millis_last > EMILYCONTROL_RATE_MILLIS){
+    millis_last = millis;
+    if (status.control_mode == CONTROL_MODE_PASSIVE){ // do nothing
+      // write out zeros
+      throttle.update(0.0);
+      rudder.update(0.0);
       // FLAG that there is new data in the control object
       new_value = 1;
     }
+    if (status.control_mode == CONTROL_MODE_DIRECT){ //offboard control
+      // read from status object
+      throttle.update(status.control_throttle);
+      rudder.update(status.control_rudder);
+    }
+    if (status.control_mode == CONTROL_MODE_INDIRECT){ // automatic control
+      // set the gains if new values
+      // check if the GPS data are new
+      // copy local GPS
+      // perform smoothing or estimation
+      // compute PID control
+      // not implemented yet: write out zeros
+      throttle.update(0.0);
+      rudder.update(0.0);
+    }
+    // FLAG that there is new data in the control object
+    new_value = 1;
   }
 }
 

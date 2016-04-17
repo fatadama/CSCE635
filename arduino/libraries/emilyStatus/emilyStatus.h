@@ -7,12 +7,6 @@
  * @brief equals degrees2radians factor (x) earth radius (meters) 6378100*pi/180*1e-7
  */
 #define GPSDATA_D2R_RE 0.0111318845
-/** Direct control mode - we are sending offboard commands for the rudder and throttle */
-#define CONTROL_MODE_DIRECT 0
-/** Direct control mode - we are sending heading and speed commands and do PID control locally */
-#define CONTROL_MODE_INDIRECT 1
-/** passive control mode - initialized, no commands received */
-#define CONTROL_MODE_PASSIVE 2
 /** conversion factor knots to meters/s */
 #define KNOTS2MS 0.514444
 /** conversion factor degrees to radians */
@@ -32,6 +26,18 @@ enum commStatus{
   COMM_STATUS_HEALTHY,
   COMM_STATUS_WARNING,
   COMM_STATUS_LOST
+};
+
+/** Enumerated type for the control mode we're currently in
+ *
+ * Meanings: CONTROL_MODE_DIRECT we're commanding rudder andd throttle directly from offboard
+             CONTROL_MODE_INDIRECT we're commanding relative GPS coordinates from offboard
+             CONTROL_MODE_PASSIVE we're doing nothing because we haven't been initialized or comm timed out
+ */
+enum controlMode{
+  CONTROL_MODE_DIRECT,
+  CONTROL_MODE_INDIRECT,
+  CONTROL_MODE_PASSIVE
 };
 
 /*! Class for holding GPS data */
@@ -93,7 +99,7 @@ public:
   double Kp[2];/*!< proportional gains for the rudder (channel 0) and throttle (channel 1) */
   double Ki[2];/*!< integral gains for the rudder (channel 0) and throttle (channel 1) */
   double Kd[2];/*!< derivative gains for the rudder (channel 0) and throttle (channel 1) */
-  uint8_t control_mode;
+  controlMode control_mode;
   commStatus comm_status;
 private:
 };
