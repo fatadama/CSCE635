@@ -34,16 +34,14 @@ SoftwareSerial gpsSerial(8, 9); // RX, TX (TX not used)
 /** throttle signal pin output */
 #define THROTTLE_PIN 6
 
+/** global status object */
 emilyStatus stat;
-//emilyStatus commstatus;
 /** GPS object */
 emilyGPS GPS;
 /** communications parser object */
 commParser comm;
-//commParser comm(&commstatus);
 /** Control object */
 emilyControl control;
-//emilyControl control(&controlstatus);
 
 uint32_t millis_next = 0;
 uint32_t millis_now = 0;
@@ -133,7 +131,6 @@ void loop()
 {
   millis_now = millis();
   // update the comm status
-  //comm.update_status(&stat);
   // see if it's time to READ XBee serial
   if( millis_now >= serial_millis_next ){
     serial_millis_next += (SERIAL_PERIOD_MICROS/1000);
@@ -148,6 +145,12 @@ void loop()
     }
   }
   // copy comm status to main status
+  if (comm.received_msg_bitstring > 0){
+    if (DEBUGGING){
+      Serial.print("RCV BIT: ");
+      Serial.println(comm.received_msg_bitstring);
+    }
+  }
   comm.sync_after_receive(&stat);
   /** See if new GPS available */
   if (gpsSerial.available())
@@ -163,7 +166,6 @@ void loop()
   comm.misc_tasks(millis_now,stat);
   comm.sync(&stat);
   // copy comm status to main status
-  //stat=comm.return_status();
   control.misc_tasks(millis_now,stat);
 
   // read the control values and write them
@@ -172,7 +174,6 @@ void loop()
     // read from control
     control.get_pwm(&pwm_rudder,&pwm_throttle);
     if(DEBUGGING){
-      //Serial.print("*********************\n");
       Serial.print(" R: ");
       Serial.print(pwm_rudder);
       Serial.print(" T: ");
@@ -210,7 +211,22 @@ void loop()
       Serial.print(x);
       Serial.print(" Y: ");
       Serial.print(y);
+      Serial.print(" NEWCMD: ");
+      Serial.print(stat.gpsCmd.is_new());
       Serial.print("\n");
-    }
+    }/*
+    if (stat.gpsCmd.is_new()){
+      stat.gpsCmd.get(&x,&y);
+      Serial.print("GPSCMD ");
+      Serial.print("Lat: ");
+      Serial.print(stat.gpsCmd.lat);
+      Serial.print(" Long: ");
+      Serial.print(stat.gpsCmd.lon);
+      Serial.print(" X: ");
+      Serial.print(x);
+      Serial.print(" Y: ");
+      Serial.print(y);
+      Serial.print("\n");
+    }*/
   }
 }

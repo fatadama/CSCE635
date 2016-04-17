@@ -18,7 +18,7 @@ class commParser
 {
 	public:
 		/** Class constructor, initializes counters to zero
-		  * 
+		  *
 		  */
 		commParser();
 		/** Feed new bytes received to the parser
@@ -50,6 +50,7 @@ class commParser
 		/** Function for getting the next byte in send_buffer and decrementing the counter */
 		uint8_t get_next_byte();
 		uint32_t get_number_received_messages();/** Return the number of received messages */
+		uint8_t received_msg_bitstring;/*!< Bitstring for holding which messages we have received between sequential calls to sync_after_receive() */
 	private:
 		/** Generic message that is called whenever we receive a the last byte of a message.
 		  *
@@ -69,7 +70,6 @@ class commParser
 		gpsData gpsCmd;/*!< Local variable for holding commanded GPS objects when received */
 		float control_rudder;
 		float control_throttle;
-		uint8_t received_msg_bitstring;/*!< Bitstring for holding which messages we have received between sequential calls to sync_after_receive() */
 		float Kp[2];
 		float Ki[2];
 		float Kd[2];
