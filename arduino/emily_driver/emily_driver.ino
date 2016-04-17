@@ -31,16 +31,14 @@ SoftwareSerial gpsSerial(8, 9); // RX, TX (TX not used)
 
 emilyStatus stat;
 emilyStatus commstatus;
-emilyStatus controlstatus;
 /** GPS object */
-//emilyGPS GPS(&stat);
 emilyGPS GPS;
 /** communications parser object */
 //commParser comm(&stat);
 commParser comm(&commstatus);
 /** Control object */
-//emilyControl control(&stat);
-emilyControl control(&controlstatus);
+emilyControl control;
+//emilyControl control(&controlstatus);
 
 uint32_t millis_next = 0;
 uint32_t millis_now = 0;
@@ -142,18 +140,27 @@ void loop()
   GPS.misc_tasks();
   GPS.sync(&stat);
   comm.misc_tasks(millis_now);
-  control.misc_tasks(millis_now);
+  control.misc_tasks(millis_now,stat);
 
   // read the control values and write them
-  /*
+  // TODO: analogWrite seems to be causing problems. Replace with a servo() object
   if(control.new_control() > 0){
     // read from control
     control.get_pwm(&pwm_rudder,&pwm_throttle);
+    if(DEBUGGING){
+      Serial.print("*********************\n");
+      Serial.print("RUDDER: ");
+      Serial.print(pwm_rudder);
+      Serial.print("THROTTLE: ");
+      Serial.print(pwm_throttle);
+    }
+    /*
     // write out rudder
     analogWrite(RUDDER_PIN,pwm_rudder);
     // write out throttle
     analogWrite(THROTTLE_PIN,pwm_throttle);
-  }*/
+    */
+  }
 
   // send any bytes in the transmit buffer
   while(comm.bytes_to_send() > 0){
@@ -162,26 +169,8 @@ void loop()
   
   // test GPS print
   if(DEBUGGING) {
-    /*
-    if (GPS.gpsNow.is_new()){
-      GPS.gpsNow.get(&x,&y);
-      Serial.print("*********************\n");
-      Serial.print("Time: ");
-      Serial.print(GPS.gpsNow.t);
-      Serial.print("Lat: ");
-      Serial.print(GPS.gpsNow.lat);
-      Serial.print(" Long: ");
-      Serial.print(GPS.gpsNow.lon);
-      Serial.print(" X: ");
-      Serial.print(x);
-      Serial.print(" Y: ");
-      Serial.print(y);
-      Serial.print("\n");
-    }
-    */
     if (stat.gpsNow.is_new()){
       stat.gpsNow.get(&x,&y);
-      Serial.print("*********************\n");
       Serial.print("Time: ");
       Serial.print(stat.gpsNow.t);
       Serial.print("Lat: ");

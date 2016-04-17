@@ -5,8 +5,7 @@ uint8_t scale_pwm(float val,float low, float high){
   return uint8_t(((val-low)/(high-low))*255.0);
 }
 
-emilyControl::emilyControl(emilyStatus*st){
-  status = st;
+emilyControl::emilyControl(){
   //rudder = 0.0;
   //throttle = 0.0;
   new_value = 0;
@@ -22,8 +21,8 @@ emilyControl::emilyControl(emilyStatus*st){
   throttle_pid.set_integral_max(0.1);
 }
 
-void emilyControl::misc_tasks(uint32_t millis){
-  if (status->control_mode == CONTROL_MODE_PASSIVE){ // do nothing
+void emilyControl::misc_tasks(uint32_t millis,emilyStatus status){
+  if (status.control_mode == CONTROL_MODE_PASSIVE){ // do nothing
     // write out zeros
     throttle.update(0.0);
     rudder.update(0.0);
@@ -34,12 +33,12 @@ void emilyControl::misc_tasks(uint32_t millis){
     // check the time
     if (millis - millis_last > EMILYCONTROL_RATE_MILLIS){
       millis_last = millis;
-      if (status->control_mode == CONTROL_MODE_DIRECT){ //offboard control
+      if (status.control_mode == CONTROL_MODE_DIRECT){ //offboard control
         // read from status object
-        throttle.update(status->control_throttle);
-        rudder.update(status->control_rudder);
+        throttle.update(status.control_throttle);
+        rudder.update(status.control_rudder);
       }
-      if (status->control_mode == CONTROL_MODE_INDIRECT){ // automatic control
+      if (status.control_mode == CONTROL_MODE_INDIRECT){ // automatic control
         // set the gains if new values
         // check if the GPS data are new
         // copy local GPS
