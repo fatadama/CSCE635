@@ -51,10 +51,11 @@ while counter < 20:
         ch = ''
         tnext = tnext + SERIAL_PERIOD
         counter = counter+1
-        (msg,lenv) = eps.pack_gps(1600000000,-960000000,float(tnext))
+        (msg,lenv) = eps.pack_gps(-963400000,306200000,float(tnext))
         if lenv > 0:
             ser.write(msg)
-            #print("Sent test GPS message")
+            #print("Sent test GPS message:")
+            print(msg.encode("hex"))
         (msg,lenv) = eps.pack_control(0.0,0.0)
         if lenv > 0:
             ser.write(msg)

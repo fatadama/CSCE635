@@ -52,6 +52,8 @@ uint8_t serialByte;
 uint8_t pwm_rudder;
 /** Throttle signal variable */
 uint8_t pwm_throttle;
+/** GPS parsing char */
+char gpsChar;
 
 // DEBUGGING VARIABLES
 float x,y;
@@ -145,18 +147,12 @@ void loop()
     }
   }
   // copy comm status to main status
-  if (comm.received_msg_bitstring > 0){
-    if (DEBUGGING){
-      Serial.print("RCV BIT: ");
-      Serial.println(comm.received_msg_bitstring);
-    }
-  }
   comm.sync_after_receive(&stat);
   /** See if new GPS available */
   if (gpsSerial.available())
   {
-    char ch = gpsSerial.read();
-    GPS.parseBytes(ch);
+    gpsChar = gpsSerial.read();
+    GPS.parseBytes(gpsChar);
   }
   // call periodic functions
   GPS.misc_tasks();
@@ -169,7 +165,7 @@ void loop()
   control.misc_tasks(millis_now,stat);
 
   // read the control values and write them
-  // TODO: analogWrite seems to be causing problems. Replace with a servo() object
+  // TODO: analogWrite seems to be causing problems. Replace with a servo() object?
   if(control.new_control() > 0){
     // read from control
     control.get_pwm(&pwm_rudder,&pwm_throttle);
@@ -205,8 +201,12 @@ void loop()
       Serial.print(stat.gpsNow.t);
       Serial.print("Lat: ");
       Serial.print(stat.gpsNow.lat);
-      Serial.print(" Long: ");
+      Serial.print(" Lon: ");
       Serial.print(stat.gpsNow.lon);
+      Serial.print(" V: ");
+      Serial.print(stat.gpsNow.v);
+      Serial.print(" H: ");
+      Serial.print(stat.gpsNow.hdg);
       Serial.print(" X: ");
       Serial.print(x);
       Serial.print(" Y: ");
@@ -214,19 +214,19 @@ void loop()
       Serial.print(" NEWCMD: ");
       Serial.print(stat.gpsCmd.is_new());
       Serial.print("\n");
-    }/*
+    }
     if (stat.gpsCmd.is_new()){
       stat.gpsCmd.get(&x,&y);
       Serial.print("GPSCMD ");
       Serial.print("Lat: ");
       Serial.print(stat.gpsCmd.lat);
-      Serial.print(" Long: ");
+      Serial.print(" Lon: ");
       Serial.print(stat.gpsCmd.lon);
       Serial.print(" X: ");
       Serial.print(x);
       Serial.print(" Y: ");
       Serial.print(y);
       Serial.print("\n");
-    }*/
+    }
   }
 }

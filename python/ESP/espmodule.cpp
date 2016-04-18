@@ -7,7 +7,7 @@
 
 /** Pack data into a GPS message */
 static PyObject * pack_gps(PyObject *self, PyObject *args){
-  long lat=0,lon=0;
+  int32_t lat=0,lon=0;
   float t = 0.0;
   if (!PyArg_ParseTuple(args,"llf",&lon,&lat,&t)){
     return NULL;

@@ -11,8 +11,9 @@
 #define KNOTS2MS 0.514444
 /** conversion factor degrees to radians */
 #define DEG2RAD 0.0174533
-
+/** Default home latitude variable - used to scale X and Y floating point values to be reasonable. WARNING May need to be changed based on where you operate! */
 #define GPS_HOME_LAT_DEFAULT 306200000
+/** Default home longitude variable - used to scale X and Y floating point values to be reasonable. WARNING May need to be changed bassed on where you operate. */
 #define GPS_HOME_LON_DEFAULT -963400000
 
 double deg2m(int32_t);/*!< Convert a double in (10^-7 degrees) to arc length in meters */

@@ -98,5 +98,18 @@ int main(){
   printf("%d/%d valid messages in test_control\n",test_control(monte),monte);
   printf("%d/%d valid messages in test_command\n",test_command(monte),monte);
   printf("%d/%d valid messages in test_pid\n",test_pid(monte),monte);
+
+  // weirdness
+  uint8_t msg[] = {0x7F,0x53,0x01,0xC0,0xAE,0x93,0xC6,0xC0,0x3D,0x40,0x12,0xEC,0x51,0x20,0x41,0x87};
+  int32_t lon=0,lat=0;
+  float t=0;
+  if (esp_unpack_gps(msg,&lon,&lat,&t) > 0){
+    printf("Hardcoded msg: lon = %ld, lat = %ld, t=%f\n",lon,lat,t);
+  }
+  printf("%ld\n",0xC0);
+  printf("%ld\n",0xAE<<8);
+  printf("%ld\n",0x93<<16);
+  printf("%ld\n",0xC6<<24);
+  printf("%ld",(0xC0) + (0xAE << 8) + (0x93<<16) + (0xC6 << 24));
   return 0;
 }
