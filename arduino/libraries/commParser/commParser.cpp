@@ -2,8 +2,6 @@
 #include <string.h>
 #include "commParser.h"
 
-#include <Arduino.h>
-
 commParser::commParser(){
   bad_checksums=0;
   bad_packets=0;
@@ -49,20 +47,6 @@ void commParser::handleMsg(){
       if (esp_unpack_gps(msg,&lon,&lat,&t) > 0){
         //set status
         gpsCmd.set(lat,lon,t);
-        for(int j = 0;j<MSG_GPS_LEN;j++){
-          Serial.print(msg[j],HEX);
-          Serial.print(",");
-        }
-        Serial.print("\n");
-        Serial.print(msg[3]);
-        Serial.print(",");
-        Serial.print(msg[4]<<8);
-        Serial.print(",");
-        Serial.print(msg[5]<<16);
-        Serial.print(",");
-        Serial.print(msg[6]<<24);
-        Serial.print(",");
-        Serial.print("\n");
       }
       else//increment the bad packet counter
         bad_packets++;

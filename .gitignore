@@ -1,3 +1,6 @@
+# CSV files (logs)
+*.csv
+
 # C++ binaries files
 cpp/bin
 

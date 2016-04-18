@@ -17,7 +17,7 @@
 SoftwareSerial gpsSerial(8, 9); // RX, TX (TX not used)
 #define GPS_BAUD_RATE 38400
 #define GPS_DEFAULT_BAUD_RATE 9600
-#define GPS_UPDATE_RATE 4
+#define GPS_UPDATE_RATE 5
 /** period in microseconds at which to check the serial port */
 #define SERIAL_PERIOD_MICROS 10000
 /** set to true to enable debug output on serial port */
@@ -170,13 +170,13 @@ void loop()
     // read from control
     control.get_pwm(&pwm_rudder,&pwm_throttle);
     if(DEBUGGING){
-      Serial.print(" R: ");
+      Serial.print("CTRL R:");
       Serial.print(pwm_rudder);
-      Serial.print(" T: ");
+      Serial.print(" T:");
       Serial.print(pwm_throttle);
-      Serial.print(" M: ");
+      Serial.print(" M:");
       Serial.print(stat.control_mode);
-      Serial.print(" S: ");
+      Serial.print(" S:");
       Serial.print(stat.comm_status);
       Serial.print("\n");
     }
@@ -197,34 +197,34 @@ void loop()
   if(DEBUGGING) {
     if (stat.gpsNow.is_new()){
       stat.gpsNow.get(&x,&y);
-      Serial.print("Time: ");
+      Serial.print("GPS Time:");
       Serial.print(stat.gpsNow.t);
-      Serial.print("Lat: ");
+      Serial.print(" Lat:");
       Serial.print(stat.gpsNow.lat);
-      Serial.print(" Lon: ");
+      Serial.print(" Lon:");
       Serial.print(stat.gpsNow.lon);
-      Serial.print(" V: ");
+      Serial.print(" V:");
       Serial.print(stat.gpsNow.v);
-      Serial.print(" H: ");
+      Serial.print(" H:");
       Serial.print(stat.gpsNow.hdg);
-      Serial.print(" X: ");
+      Serial.print(" X:");
       Serial.print(x);
-      Serial.print(" Y: ");
+      Serial.print(" Y:");
       Serial.print(y);
-      Serial.print(" NEWCMD: ");
+      Serial.print(" NEWCMD:");
       Serial.print(stat.gpsCmd.is_new());
       Serial.print("\n");
     }
     if (stat.gpsCmd.is_new()){
       stat.gpsCmd.get(&x,&y);
       Serial.print("GPSCMD ");
-      Serial.print("Lat: ");
+      Serial.print("Lat:");
       Serial.print(stat.gpsCmd.lat);
-      Serial.print(" Lon: ");
+      Serial.print(" Lon:");
       Serial.print(stat.gpsCmd.lon);
-      Serial.print(" X: ");
+      Serial.print(" X:");
       Serial.print(x);
-      Serial.print(" Y: ");
+      Serial.print(" Y:");
       Serial.print(y);
       Serial.print("\n");
     }

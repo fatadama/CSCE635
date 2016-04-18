@@ -85,11 +85,10 @@ inline int8_t esp_pack_gps(uint8_t*msg,int32_t lon, int32_t lat, float time){
 	msg[msg_counter] = MSG_GPS;
 	msg_counter++;//3
 	// pack longitude
-	//pack_int32(&msg[msg_counter], lon);
 	memcpy(&msg[msg_counter],&lon,4);
 	msg_counter += 4;//7
 	// pack latitude
-	pack_int32(&msg[msg_counter], lat);
+	memcpy(&msg[msg_counter],&lat,4);
 	msg_counter += 4;//11
 	// time
 	memcpy(&msg[msg_counter],&time,4);
@@ -109,10 +108,10 @@ inline int8_t esp_unpack_gps(uint8_t*msg,int32_t* lon, int32_t* lat, float* time
 		return -2;
 	//pass over the message ID byte (2)
 	int8_t msg_counter=3;
-	//*lon = msg[msg_counter] + (msg[msg_counter+1]<<8) + (msg[msg_counter+2]<<16) + (msg[msg_counter+3]<<24);
 	memcpy(lon,&msg[msg_counter],4);
 	msg_counter+=4;
-	*lat = msg[msg_counter] + (msg[msg_counter+1]<<8) + (msg[msg_counter+2]<<16) + (msg[msg_counter+3]<<24);
+	//*lat = msg[msg_counter] + (msg[msg_counter+1]<<8) + (msg[msg_counter+2]<<16) + (msg[msg_counter+3]<<24);
+	memcpy(lat,&msg[msg_counter],4);
 	msg_counter+=4;
 	memcpy(time,&msg[msg_counter],4);
 	msg_counter = msg_counter + 1;
