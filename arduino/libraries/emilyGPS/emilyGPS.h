@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "emilyStatus.h"
 
-/** MAximum NMEA string sentence length */
+/** maximum NMEA string sentence length */
 const int sentenceSize = 80;
 /** @file */
 
@@ -12,10 +12,14 @@ class emilyGPS{
 public:
   /** Constructor
    *
-   *
+   * @brief A short summary of standard GPS messages (NMEA) here: http://aprs.gids.nl/nmea/#rmc
    */
   emilyGPS();
-  int16_t parseBytes(char ch);/** Parse a sequence of raw bytes from serial port. Return values: -1 == got a non-PMC message, 0 == no message, 1 == not a PMC message */
+  /** Parse a sequence of raw bytes from serial port.
+    *
+    * Return values: -2 == got a PMC message without a GPS lock, -1 == got a non-PMC message, 0 == no message, 1 == got a PMC message
+    */
+  int16_t parseBytes(char ch);
   int16_t parseSentence();/** Parse a sentence from the GPS */
   void misc_tasks();/** Placeholder for miscellaneous tasks */
   /** Send the command to set the baud rate. Returns a string

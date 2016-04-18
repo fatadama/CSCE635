@@ -8,15 +8,17 @@
  */
 #include <Arduino.h>
 #include <SoftwareSerial.h>
+#include <Servo.h>
 #include "emilyStatus.h"
 #include "emilyGPS.h"
 #include "commParser.h"
 #include "emilyControl.h"
 
 /** serial object for reading GPS */
-SoftwareSerial gpsSerial(8, 9); // RX, TX (TX not used)
+SoftwareSerial gpsSerial(8, 7); // RX, TX pins
 #define GPS_BAUD_RATE 38400
 #define GPS_DEFAULT_BAUD_RATE 9600
+/** The GPS sample rate in Hz. Valid options: [1,2,4,5,10,20]. We seem to be having problems at 10 */
 #define GPS_UPDATE_RATE 5
 /** period in microseconds at which to check the serial port */
 #define SERIAL_PERIOD_MICROS 10000
@@ -30,9 +32,13 @@ SoftwareSerial gpsSerial(8, 9); // RX, TX (TX not used)
 /** serial port name to use: Serial is USB, Serial1 is the RX and TX pins */
 #define COMM_SERIAL Serial1
 /** rudder signal pin output */
-#define RUDDER_PIN 5
+#define RUDDER_PIN 9
 /** throttle signal pin output */
-#define THROTTLE_PIN 6
+#define THROTTLE_PIN 10
+/** Rudder servo object */
+Servo rudderServo;
+/** Throttle servo object */
+Servo throttleServo;
 
 /** global status object */
 emilyStatus stat;
@@ -49,9 +55,9 @@ uint32_t serial_millis_next = 0;
 // Variable for parsing XBee bytes
 uint8_t serialByte;
 /** Rudder signal variable */
-uint8_t pwm_rudder;
+uint16_t pwm_rudder;
 /** Throttle signal variable */
-uint8_t pwm_throttle;
+uint16_t pwm_throttle;
 /** GPS parsing char */
 char gpsChar;
 
@@ -125,8 +131,10 @@ void setup()
   // set target time for reading serial
   serial_millis_next = millis() + (SERIAL_PERIOD_MICROS/1000);
   // initialize servo pins out
-  pinMode(RUDDER_PIN,OUTPUT);
-  pinMode(THROTTLE_PIN,OUTPUT);  
+  //pinMode(RUDDER_PIN,OUTPUT);
+  rudderServo.attach(RUDDER_PIN);
+  //pinMode(THROTTLE_PIN,OUTPUT);
+  throttleServo.attach(THROTTLE_PIN);  
 }
 
 void loop()
@@ -165,7 +173,6 @@ void loop()
   control.misc_tasks(millis_now,stat);
 
   // read the control values and write them
-  // TODO: analogWrite seems to be causing problems. Replace with a servo() object?
   if(control.new_control() > 0){
     // read from control
     control.get_pwm(&pwm_rudder,&pwm_throttle);
@@ -180,12 +187,10 @@ void loop()
       Serial.print(stat.comm_status);
       Serial.print("\n");
     }
-    /*
     // write out rudder
-    analogWrite(RUDDER_PIN,pwm_rudder);
+    rudderServo.writeMicroseconds(pwm_rudder);
     // write out throttle
-    analogWrite(THROTTLE_PIN,pwm_throttle);
-    */
+    throttleServo.writeMicroseconds(pwm_throttle);
   }
 
   // send any bytes in the transmit buffer

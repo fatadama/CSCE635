@@ -9,8 +9,8 @@
 /** Target automatic control rate execution in Hz */
 #define EMILYCONTROL_RATE_MILLIS 100
 
-/** Scale a floating point 'val between 'low' and 'high' to the PWM output range of [0,255] */
-uint8_t scale_pwm(float val,float low, float high);
+/** Scale a floating point 'val between 'low' and 'high' to the PWM output range of [1000,2000] */
+uint16_t scale_pwm(float val,float low, float high);
 
 /*! Control class. Handles the mode logic and either passes through control values in DIRECT mode, sets zeros in PASSIVE mode, or computes onboard in INDIRECT mode */
 class emilyControl{
@@ -32,7 +32,7 @@ public:
    * @param[out] pwm_rudder rudder PWM expressed in [0,255].
    * @param[out] pwm_throttle throttle PWM expressed in [0,255]
    */
-  void get_pwm(uint8_t* pwm_rudder,uint8_t* pwm_throttle);
+  void get_pwm(uint16_t* pwm_rudder,uint16_t* pwm_throttle);
   uint8_t new_control();/*<! Return 1 if the control value has been updated */
 private:
   //emilyStatus* status; /*<! Pointer to the global status object */

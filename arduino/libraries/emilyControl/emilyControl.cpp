@@ -1,8 +1,8 @@
 #include "emilyControl.h"
 #include <stdint.h>
 
-uint8_t scale_pwm(float val,float low, float high){
-  return uint8_t(((val-low)/(high-low))*255.0);
+uint16_t scale_pwm(float val,float low, float high){
+  return uint16_t ( (1000.0*(val+high)-2000.0*low)/(high-low) );
 }
 
 emilyControl::emilyControl(){
@@ -52,7 +52,7 @@ void emilyControl::misc_tasks(uint32_t millis,emilyStatus status){
   }
 }
 
-void emilyControl::get_pwm(uint8_t* pwm_rudder,uint8_t* pwm_throttle){
+void emilyControl::get_pwm(uint16_t* pwm_rudder,uint16_t* pwm_throttle){
   *pwm_rudder = scale_pwm(rudder.get_x(),-1.0,1.0);
   *pwm_throttle = scale_pwm(throttle.get_x(),0.0,1.0);
   // FLAG that the control value has been accessed

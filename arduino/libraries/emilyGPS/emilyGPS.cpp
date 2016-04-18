@@ -27,11 +27,14 @@ int16_t emilyGPS::parseSentence(){
   getField(field, 0);
   if (strcmp(field, "$GPRMC") == 0)
   {
+    // check if this is a valid message
+    getField(field,2);
+    if (strcmp(field,"A") != 0){
+      return -1;
+    }
     // read time
     getField(field,1);
-    //int32_t timei = convertTime(field); // time in seconds
     float timei = convertTimef(field); // time in seconds
-    //int32_t timei = 0;
     // read lat
     getField(field, 3);  // number in 0.01 * degrees
     int32_t lat = convertGPS(field);
