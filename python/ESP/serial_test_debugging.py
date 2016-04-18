@@ -86,7 +86,7 @@ def parse_debug(chBuffer,systime):
 
 
 SERIAL_RATE_HZ = 2.0
-SERIAL_READ_RATE_HZ = 10.0
+SERIAL_READ_RATE_HZ = 5.0
 SERIAL_PERIOD = 1.0/SERIAL_RATE_HZ
 SERIAL_READ_PERIOD = 1.0/SERIAL_READ_RATE_HZ
 PORT = '/dev/ttyUSB0'
@@ -96,22 +96,27 @@ DEBUG_PORT = '/dev/ttyACM0'
 ser = serial.Serial(PORT,9600,timeout=0.01)
 print("Opening port" + PORT)
 
-serDebug = serial.Serial(DEBUG_PORT,9600,timeout=0.1)
+try:
+    serDebug = serial.Serial(DEBUG_PORT,9600,timeout=0.1)
+except serial.serialutil.SerialException:
+    serDebug = None
 
 ser.open()
+if serDebug is not None:
+    serDebug.open()
 
 counter = 0
-tnext = time.clock() + SERIAL_PERIOD
-tnext2 = time.clock() + SERIAL_READ_PERIOD
+tnext = time.time() + SERIAL_PERIOD
+tnext2 = time.time() + SERIAL_READ_PERIOD
 ch = ''
 chDebug = ''
 try:
     while True:#counter < 20:
-        if time.clock() >= tnext2:
+        if time.time() >= tnext2:
             parse_debug(chDebug,time.time())
             chDebug = ''
             tnext2 = tnext2 + SERIAL_READ_PERIOD
-        if time.clock() >= tnext:
+        if time.time() >= tnext:
             #print(chDebug)
             out = eps.parse_buffer(ch)
             if not(type(out) == int):
@@ -125,7 +130,7 @@ try:
                         print("COMM GPS: %d,%d,%f" % (lon,lat,t))
                     if msg_id == eps.message_control():
                         (rudd,thro,len2) = eps.unpack_control(msg)
-                        print("COMM CONTROL: %f,%f" % (rudd,thro))
+                        print("COMM CONTROL: %f,%f,t=%f" % (rudd,thro,time.time()))
                     if msg_id == eps.message_command():
                         (hdg,spd,len2) = eps.unpack_command(msg)
                         print("COMM COMMAND: %f,%f" % (hdg,spd))
@@ -134,12 +139,14 @@ try:
                         print("COMM SET_PID: %i,%f,%f,%f" % (ch,Kp,Ki,Kd))
             ch = ''
             tnext = tnext + SERIAL_PERIOD
+            '''
             counter = counter+1
             (msg,lenv) = eps.pack_gps(-963400000,306200000,float(tnext))
             if lenv > 0:
                 ser.write(msg)
                 #print("Sent test GPS message:")
                 #print(msg.encode("hex"))
+            '''
             (msg,lenv) = eps.pack_control(0.0,0.0)
             if lenv > 0:
                 ser.write(msg)
@@ -147,8 +154,9 @@ try:
         # echo anything we receive
         while ser.inWaiting() > 0:
             ch += ser.read()
-        while serDebug.inWaiting() > 0:
-            chDebug += serDebug.read()
+        if serDebug is not None:
+            while serDebug.inWaiting() > 0:
+                chDebug += serDebug.read()
 except KeyboardInterrupt:
     ser.close()
     # close logs
