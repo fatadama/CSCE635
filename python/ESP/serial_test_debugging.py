@@ -108,37 +108,38 @@ tnext = time.time() + SERIAL_PERIOD
 tnext2 = time.time() + SERIAL_READ_PERIOD
 ch = ''
 chDebug = ''
-parser = espParser()
+parser = esp.espParser()
 try:
-    while True:#counter < 20:
+    while True:
         if time.time() >= tnext2:
             parse_debug(chDebug,time.time())
             chDebug = ''
             tnext2 = tnext2 + SERIAL_READ_PERIOD
         if time.time() >= tnext:
-            #print(chDebug)
+            #print(ch)
             (num,msgs) = parser.parseBytes(ch)
-            if not(type(out) == int):
-                for k in range(num):
-                    # message id
-                    msg_id = msgs[k][2]
-                    msg = msgs[k]
-                    if msg_id == esp.message_gps():
-                        (len2,lon,lat,t) = esp.unpack_gps(msg)
-                        print("COMM GPS: %d,%d,%f" % (lon,lat,t))
-                    if msg_id == esp.message_control():
-                        (len2,rudd,thro) = esp.unpack_control(msg)
-                        print("COMM CONTROL: %f,%f,t=%f" % (rudd,thro,time.time()))
-                    if msg_id == esp.message_command():
-                        (len2,hdg,spd) = esp.unpack_command(msg)
-                        print("COMM COMMAND: %f,%f" % (hdg,spd))
-                    if msg_id == esp.message_set_pid():
-                        (len2,ch0,Kp,Ki,Kd) = esp.unpack_set_pid(msg)
-                        print("COMM SET_PID: %i,%f,%f,%f" % (ch0,Kp,Ki,Kd))
+            #if not(type(out) == int):
+            num = len(msgs)
+            for k in range(num):
+                # message id
+                msg_id = struct.unpack('B',msgs[k][2])[0]
+                msg = msgs[k]
+                if msg_id == esp.message_gps():
+                    (len2,lon,lat,t) = esp.unpack_gps(msg)
+                    print("COMM GPS: %d,%d,%f" % (lon,lat,t))
+                if msg_id == esp.message_control():
+                    (len2,rudd,thro) = esp.unpack_control(msg)
+                    print("COMM CONTROL: %f,%f,t=%f" % (rudd,thro,time.time()))
+                if msg_id == esp.message_command():
+                    (len2,hdg,spd) = esp.unpack_command(msg)
+                    print("COMM COMMAND: %f,%f" % (hdg,spd))
+                if msg_id == esp.message_set_pid():
+                    (len2,ch0,Kp,Ki,Kd) = esp.unpack_set_pid(msg)
+                    print("COMM SET_PID: %i,%f,%f,%f" % (ch0,Kp,Ki,Kd))
             ch = ''
             tnext = tnext + SERIAL_PERIOD
-            (msg,lenv) = esp.pack_control(0.0,0.0)
-            if lenv > 0:
+            (msg) = esp.pack_control(0.0,0.0)
+            if len(msg) > 0:
                 ser.write(msg)
                 #print("Sent test control message")
         # echo anything we receive

@@ -38,7 +38,7 @@ class espParser():
     def parseBytes(self,chars):
         self.buffer+=chars
         # index of buffer chars to remove
-        idrm = -1
+        idrm = 0
         # parse buffer
         numMsgs = 0
         msgs = []
@@ -49,13 +49,13 @@ class espParser():
                 # parse
                 print(h1,h2,id0)
                 numMsgs=numMsgs+1
-                print(id0==MSG_GPS)
-                if (id0==MSG_GPS):
-                    finalInd = (k-1)+MSG_GPS_LEN+1
-                    print(finalInd)
-                    msgs.append(self.buffer[k-1:finalInd])
+                finalInd = (k-1)+MSG_GPS_LEN+1
+                # make sure we always remove the highest index that we've parsed
+                if idrm <= finalInd:
+                    idrm = finalInd
+                msgs.append(self.buffer[k-1:finalInd])
         # clear buffer
-        self.buffer = self.buffer[finalInd:]
+        self.buffer = self.buffer[idrm:]
         # make sure buffer's not too long
         if len(self.buffer) > self.max_len:
             self.buffer = self.buffer[-(self.max_len):-1]
@@ -66,7 +66,14 @@ class espParser():
             (flag,lon,lat,time) = unpack_gps(msgs[0])
             return(flag,lon,lat,time)
         if (id==MSG_CONTROL):
-
+            (flag,rudd,thro) = unpack_control(msgs[0])
+            return(flag,rudd,thro)
+        if (id==MSG_COMMAND):
+            (flag,hdg,speed) = unpack_command(msgs[0])
+            return(flag,hdg,speed)
+        if (id==MSG_SET_PID):
+            (flag,ch,Kp,Ki,Kd) = unpack_set_pid(msgs[0])
+            return(flag,ch,Kp,Ki,Kd)
 
 def checksum_valid(msg,msg_len):
     chksum = 0
@@ -83,6 +90,9 @@ def compute_checksum(msg,msg_len):
     chksum=chksum%256
     return chksum
 
+## Pack a GPS command message
+# @param[in] lon the longitude in (degrees x 10^7) as a python int
+# @param[in] lat the latitude in (degrees x 10^7) as a python int
 def pack_gps(lon,lat,time):
     buf = bytes()
     buf+=struct.pack('%sB' % 3,ESP_HEADER1,ESP_HEADER2,MSG_GPS)
@@ -98,6 +108,24 @@ def pack_control(rudd,thro):
     buf+=struct.pack('f',rudd)
     buf+=struct.pack('f',thro)
     buf+=struct.pack('B',compute_checksum(buf,MSG_CONTROL_LEN))
+    return buf
+
+def pack_command(hdg,speed):
+    buf = bytes()
+    buf+=struct.pack('%sB' % 3,ESP_HEADER1,ESP_HEADER2,MSG_COMMAND)
+    buf+=struct.pack('f',hdg)
+    buf+=struct.pack('f',speed)
+    buf+=struct.pack('B',compute_checksum(buf,MSG_COMMAND_LEN))
+    return buf
+
+def pack_set_pid(ch,Kp,Ki,Kd):
+    buf = bytes()
+    buf+=struct.pack('%sB' % 3,ESP_HEADER1,ESP_HEADER2,MSG_SET_PID)
+    buf+=struct.pack('B',ch)
+    buf+=struct.pack('f',Kp)
+    buf+=struct.pack('f',Ki)
+    buf+=struct.pack('f',Kd)
+    buf+=struct.pack('B',compute_checksum(buf,MSG_SET_PID_LEN))
     return buf
 
 def unpack_gps(buf):
@@ -121,7 +149,29 @@ def unpack_control(buf):
         flag = -1
     else:
         flag = MSG_CONTROL_LEN
-    return(flag,lon,lat,time)
+    return(flag,rudd,thro)
+
+def unpack_command(buf):
+    hdg=struct.unpack('f',buf[3:7])[0]
+    speed=struct.unpack('f',buf[7:11])[0]
+    # checksum
+    if not(checksum_valid(buf,MSG_COMMAND_LEN)):
+        flag = -1
+    else:
+        flag = MSG_COMMAND_LEN
+    return(flag,hdg,speed)
+
+def unpack_set_pid(buf):
+    ch=struct.unpack('B',buf[3])[0]
+    Kp=struct.unpack('f',buf[4:8])[0]
+    Ki=struct.unpack('f',buf[8:12])[0]
+    Kd=struct.unpack('f',buf[12:16])[0]
+    # checksum
+    if not(checksum_valid(buf,MSG_SET_PID_LEN)):
+        flag = -1
+    else:
+        flag = MSG_SET_PID_LEN
+    return(flag,ch,Kp,Ki,Kd)
 
 def main():
     # test function
