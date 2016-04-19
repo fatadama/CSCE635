@@ -1,0 +1,8 @@
+Python extension for Emily Serial Protocol
+to use: 
+	from python/ESP directory run "python setup.py install"
+	in python file: add "build/lib.linux-i686-2.7" to the path using sys.path.append() or equivalent
+	import eps and use functions
+
+esp-test.py has an example that packs and unpacks data
+serial_test_extension interacts with the actual Arduino transmitting messages, using an XBee on dev/ttyUSB0
