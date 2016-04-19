@@ -29,12 +29,19 @@ def message_set_pid():
 def message_command():
     return MSG_COMMAND
 
+## Parser class for handling messages
 class espParser():
+    ## Initialization function. Sets default max buffer length to 1024.
     def __init__(self):
         self.buffer = ''
         self.max_len = 1024# maxlength of buffer in bytes
         return
-    ## Accept bytes from the serial port and search through for ESP messages
+    ## Accept bytes from the serial port and search through for ESP messages.
+    #
+    # Stores a string as a class member. Whenever a message is parsed, delete the buffer up to that point.
+    # @param[in] strings from serial.read()
+    # @param[out] numMsgs the number of messages read from the buffer
+    # @param[out] msgs a list of messages in the buffer
     def parseBytes(self,chars):
         self.buffer+=chars
         # index of buffer chars to remove
@@ -54,12 +61,16 @@ class espParser():
                 if idrm <= finalInd:
                     idrm = finalInd
                 msgs.append(self.buffer[k-1:finalInd])
+        numMsgs = len(msgs)
         # clear buffer
         self.buffer = self.buffer[idrm:]
         # make sure buffer's not too long
         if len(self.buffer) > self.max_len:
             self.buffer = self.buffer[-(self.max_len):-1]
         return (numMsgs,msgs)
+    ## Parse the first in a list of messages. Returns output dependent on the message ID.
+    #
+    # Probably don't use this function, it isn't a very good solution. See serial_test_debugging.py for a reasonable approach.
     def parseMessageBuffer(self,msgs):
         id = struct.unpack('B',msgs[0][2])
         if (id==MSG_GPS):
@@ -75,6 +86,7 @@ class espParser():
             (flag,ch,Kp,Ki,Kd) = unpack_set_pid(msgs[0])
             return(flag,ch,Kp,Ki,Kd)
 
+## Return true if a checksum byte in a message is the correct value
 def checksum_valid(msg,msg_len):
     chksum = 0
     chksum_msg = struct.unpack("B",msg[msg_len-1])[0]
@@ -82,6 +94,7 @@ def checksum_valid(msg,msg_len):
     # check
     return (chksum==chksum_msg)
 
+## Compute a checksum for a message of specified length
 def compute_checksum(msg,msg_len):
     chksum = 0
     for k in range(msg_len-1):
@@ -93,6 +106,8 @@ def compute_checksum(msg,msg_len):
 ## Pack a GPS command message
 # @param[in] lon the longitude in (degrees x 10^7) as a python int
 # @param[in] lat the latitude in (degrees x 10^7) as a python int
+# @param[in] time the time as a python float. Not used by Arduino.
+# @param[out] the message. Write to the serial port using write()
 def pack_gps(lon,lat,time):
     buf = bytes()
     buf+=struct.pack('%sB' % 3,ESP_HEADER1,ESP_HEADER2,MSG_GPS)
@@ -102,6 +117,10 @@ def pack_gps(lon,lat,time):
     buf+=struct.pack('B',compute_checksum(buf,MSG_GPS_LEN))
     return buf
 
+## Pack a low-level control message
+# @param[in] rudd the rudder servo command mapped from [-1,1] as a python float
+# @param[in] thro the throttle servo command mapped from [0,1] as a python float
+# @param[out] the message. Write to the serial port using write()
 def pack_control(rudd,thro):
     buf = bytes()
     buf+=struct.pack('%sB' % 3,ESP_HEADER1,ESP_HEADER2,MSG_CONTROL)
@@ -110,6 +129,10 @@ def pack_control(rudd,thro):
     buf+=struct.pack('B',compute_checksum(buf,MSG_CONTROL_LEN))
     return buf
 
+## Pack a high-level control message
+# @param[in] hdg the relative heading in radians from [-pi, pi] as a python float
+# @param[in] speed the speed on [0,1] or range as a distance in meters. Have not decided which yet.
+# @param[out] the message. Write to the serial port using write()
 def pack_command(hdg,speed):
     buf = bytes()
     buf+=struct.pack('%sB' % 3,ESP_HEADER1,ESP_HEADER2,MSG_COMMAND)
@@ -118,6 +141,12 @@ def pack_command(hdg,speed):
     buf+=struct.pack('B',compute_checksum(buf,MSG_COMMAND_LEN))
     return buf
 
+## Pack a PID command message
+# @param[in] ch the channel (0 == rudder, 1 == throttle) for which to set PID values as a python int
+# @param[in] Kp the proportional gain as a float
+# @param[in] Ki the integral gain as a float
+# @param[in] Kd the derivative gain as a float
+# @param[out] the message. Write to the serial port using write()
 def pack_set_pid(ch,Kp,Ki,Kd):
     buf = bytes()
     buf+=struct.pack('%sB' % 3,ESP_HEADER1,ESP_HEADER2,MSG_SET_PID)
@@ -128,6 +157,12 @@ def pack_set_pid(ch,Kp,Ki,Kd):
     buf+=struct.pack('B',compute_checksum(buf,MSG_SET_PID_LEN))
     return buf
 
+## Unpack a GPS message
+# @param[in] The message from serial.read()
+# @param[out] flag (-1 if the checksum is invalid; else, the number of bytes read)
+# @param[out] lon the longitude in (degrees x 10^7) as a python int
+# @param[out] lat the latitude in (degrees x 10^7) as a python int
+# @param[out] time the time as a python float.
 def unpack_gps(buf):
     # header bytes
     lon = struct.unpack('l',buf[3:7])[0]
@@ -140,6 +175,11 @@ def unpack_gps(buf):
         flag = MSG_GPS_LEN
     return(flag,lon,lat,time)
 
+## Unpack a low-level control message
+# @param[in] The message from serial.read()
+# @param[out] flag (-1 if the checksum is invalid; else, the number of bytes read)
+# @param[out] rudd the rudder command as a float on [-1, 1]
+# @param[out] thro the throttle command as a float on [0,1]
 def unpack_control(buf):
     # header bytes
     rudd = struct.unpack('f',buf[3:7])[0]
@@ -151,6 +191,11 @@ def unpack_control(buf):
         flag = MSG_CONTROL_LEN
     return(flag,rudd,thro)
 
+## Unpack a high-level control message
+# @param[in] The message from serial.read()
+# @param[out] flag (-1 if the checksum is invalid; else, the number of bytes read)
+# @param[out] hdg the relative heading EMILY is going to
+# @param[out] speed either the range (metres) or the speed ([0,1]) at which EMILY is going.
 def unpack_command(buf):
     hdg=struct.unpack('f',buf[3:7])[0]
     speed=struct.unpack('f',buf[7:11])[0]
@@ -161,6 +206,12 @@ def unpack_command(buf):
         flag = MSG_COMMAND_LEN
     return(flag,hdg,speed)
 
+## Unpack a PID confirmation message
+# @param[in] The message from serial.read()
+# @param[out] ch the channel (0 == rudder, 1 == throttle) for which to set PID values as a python int
+# @param[out] Kp the proportional gain as a float
+# @param[out] Ki the integral gain as a float
+# @param[out] Kd the derivative gain as a float
 def unpack_set_pid(buf):
     ch=struct.unpack('B',buf[3])[0]
     Kp=struct.unpack('f',buf[4:8])[0]
