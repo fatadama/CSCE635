@@ -55,12 +55,30 @@ class espParser():
             if h1==ESP_HEADER1 and h2==ESP_HEADER2:
                 # parse
                 print(h1,h2,id0)
-                numMsgs=numMsgs+1
-                finalInd = (k-1)+MSG_GPS_LEN+1
+                # check that there are enough bites remaining
+                valid = False
+                if id0 == MSG_GPS:
+                    if len(self.buffer[k-1:]) >= MSG_GPS_LEN:
+                        finalInd = (k-1)+MSG_GPS_LEN+1
+                        valid = True
+                if id0 == MSG_CONTROL:
+                    if len(self.buffer[k-1:]) >= MSG_CONTROL_LEN:
+                        finalInd = (k-1)+MSG_CONTROL_LEN+1
+                        valid = True
+                if id0 == MSG_COMMAND:
+                    if len(self.buffer[k-1:]) >= MSG_COMMAND_LEN:
+                        finalInd = (k-1)+MSG_COMMAND_LEN+1
+                        valid = True
+                if id0 == MSG_SET_PID:
+                    if len(self.buffer[k-1:]) >= MSG_SET_PID_LEN:
+                        finalInd = (k-1)+MSG_SET_PID_LEN+1
+                        valid = True
+                if valid:
+                    numMsgs=numMsgs+1
+                    msgs.append(self.buffer[k-1:finalInd])
                 # make sure we always remove the highest index that we've parsed
                 if idrm <= finalInd:
                     idrm = finalInd
-                msgs.append(self.buffer[k-1:finalInd])
         numMsgs = len(msgs)
         # clear buffer
         self.buffer = self.buffer[idrm:]

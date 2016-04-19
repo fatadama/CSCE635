@@ -44,7 +44,7 @@ enum controlMode{
 /*! Class for holding GPS data */
 class gpsData{
 public:
-  gpsData();
+  gpsData();/*!< Constructor - initializes init to false and sets the default home location */
   int32_t lon; /*!< Longitude (10^-7 degrees east) */
   int32_t lat; /*!< Latitutde (10^-7 degrees north) */
   double t; /*!< Time (sec) */
@@ -55,6 +55,7 @@ public:
   bool init; /*!< Status indicator so we can tell if the value of a GPS object has been set */
   /** Set the value of GPS data object and compute x-y
    *
+   * Sets new_value to 1 and init to True
    * @param[in] lati latitutde reading in DEGREES
    * @param[in] loni longitude reading in DEGREES
    * @param[in] ti time from GPS in seconds
@@ -69,7 +70,7 @@ public:
    * @param[in] hdg "course made good" from GPS in degrees
    */
   void set(int32_t lati, int32_t longi, float ti, float vi, float hdgi);
-  int8_t is_new();/*<! Return the current value of 'new' */
+  int8_t is_new();/*<! Return the current value of 'new_value' */
   /** Set the value of GPS data object and compute x-y.
    *
    * We use 10^-7 degrees as the units for compatibility with Arduino, which lacks double floating-point precision.
@@ -80,7 +81,7 @@ public:
    */
   void set(int32_t lati,int32_t longi,float ti); /*!< Set the value of GPS data object and compute x-y. Uses long inputs to be compatible with comm protocol */
   void set_home(int32_t lat1,int32_t lon1); /*!< Change from default home lat/lon coordinates to new ones. Units are (10^-7 degrees) */
-  void get(float*x,float*y);/*!< Return the current position state for control purposes */
+  void get(float*x,float*y);/*!< Return the current position state for control purposes. Sets the value of new_value to zero */
 private:
   int32_t lat_home;
   int32_t lon_home;

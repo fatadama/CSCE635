@@ -1,14 +1,14 @@
 /** @file
- * Send commands to the GPS to set the sample rate and baud rate
+ * Try reading from GPS using servoTimer2 library instead of servo
  * Connections: Arduino pin 8 (RX) to Logic Level Shifter to GPS TX
  *              Arduino pin 7 (TX) to Logic Level Shifter to GPS RX
  *              Logic Level Shifter HV to Arduino VCC
  *              Logic Level Shifter LV to 3.3V Regulated supply for GPS
  *              Common ground on Logic Level, Arduino, GPS
  */
-#include <Arduino.h>
+//#include <Arduino.h>
 #include <SoftwareSerial.h>
-#include <Servo.h>
+#include <ServoTimer2.h>
 #include "emilyStatus.h"
 #include "emilyGPS.h"
 #include "commParser.h"
@@ -16,16 +16,14 @@
 
 /** serial object for reading GPS */
 SoftwareSerial gpsSerial(8, 7); // RX, TX pins
-/** GPS baud rate to set - this one changes */
-#define GPS_BAUD_RATE 57600
-/** GPS builtin baud rate: this doesn't change */
+#define GPS_BAUD_RATE 38400
 #define GPS_DEFAULT_BAUD_RATE 9600
 /** The GPS sample rate in Hz. Valid options: [1,2,4,5,10,20]. We seem to be having problems at 10 */
-#define GPS_UPDATE_RATE 10
+#define GPS_UPDATE_RATE 5
 /** period in microseconds at which to check the serial port */
 #define SERIAL_PERIOD_MICROS 10000
 /** set to true to enable debug output on serial port */
-#define DEBUGGING false
+#define DEBUGGING true
 /** XBee baud rate */
 #define XBEE_SERIAL_BAUD 9600
 /** Debugging serial baud rate */
@@ -38,9 +36,9 @@ SoftwareSerial gpsSerial(8, 7); // RX, TX pins
 /** throttle signal pin output */
 #define THROTTLE_PIN 10
 /** Rudder servo object */
-Servo rudderServo;
+ServoTimer2 rudderServo;
 /** Throttle servo object */
-Servo throttleServo;
+ServoTimer2 throttleServo;
 
 /** global status object */
 emilyStatus stat;
@@ -87,15 +85,6 @@ void configure_gps(int baud, int sample){
   //reconnect to GPS at the faster baud rate
   gpsSerial.begin(GPS_BAUD_RATE);
   delay(5000);
-  //pack GPS message to send only RMC GPS messages
-  len = GPS.send_command_configure_nmea_message(buffer,0,0,0,0,1,0,0);//should the value be zero??
-  buffer[len] = 0;
-  // write one byte at a time
-  for(int j = 0;j<len;j++){
-    gpsSerial.write(buffer[j]);
-    delay(0.05);
-  }
-  delay(1000);
   // pack GPS message for faster sampling - 10 Hz target  
   len = GPS.send_command_configure_position_rate(buffer,sample);
   buffer[len] = 0;
@@ -117,12 +106,6 @@ void setup()
   COMM_SERIAL.begin(XBEE_SERIAL_BAUD);
   // set the GPS baud rate and sample rate
   switch (GPS_BAUD_RATE){
-    case 9600:
-      configure_gps(1,GPS_UPDATE_RATE);
-      break;
-    case 19200:
-      configure_gps(2,GPS_UPDATE_RATE);
-      break;
     case 38400:
       configure_gps(3,GPS_UPDATE_RATE);
       break;
@@ -148,8 +131,10 @@ void setup()
   // set target time for reading serial
   serial_millis_next = millis() + (SERIAL_PERIOD_MICROS/1000);
   // initialize servo pins out
-  rudderServo.attach(RUDDER_PIN);
-  throttleServo.attach(THROTTLE_PIN);  
+  //pinMode(RUDDER_PIN,OUTPUT);
+  rudderServo.attach(RUDDER_PIN,1000,2000);
+  //pinMode(THROTTLE_PIN,OUTPUT);
+  throttleServo.attach(THROTTLE_PIN,1000,2000);  
 }
 
 void loop()
@@ -176,8 +161,6 @@ void loop()
   {
     gpsChar = gpsSerial.read();
     GPS.parseBytes(gpsChar);
-    if(DEBUGGING)
-      Serial.print(gpsChar);
   }
   // call periodic functions
   GPS.misc_tasks();
@@ -205,9 +188,9 @@ void loop()
       Serial.print("\n");
     }
     // write out rudder
-    rudderServo.writeMicroseconds(pwm_rudder);
+    rudderServo.write(pwm_rudder);
     // write out throttle
-    throttleServo.writeMicroseconds(pwm_throttle);
+    throttleServo.write(pwm_throttle);
   }
 
   // send any bytes in the transmit buffer

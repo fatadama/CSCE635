@@ -38,6 +38,8 @@ public:
   uint8_t send_command_configure_position_rate(uint8_t*buffer,uint8_t rate);
   /** Send command to perform a cold restart */
   uint8_t send_command_restart_cold(uint8_t*buffer);
+  /** Send command to configure which messages are sent from GPS */
+  uint8_t send_command_configure_nmea_message(uint8_t*buffer,uint8_t gga,uint8_t gsa, uint8_t gsv, uint8_t gll, uint8_t rmc, uint8_t vtg, uint8_t zda);
   /** Return new GPS data */
   void sync(emilyStatus*st);
 private:

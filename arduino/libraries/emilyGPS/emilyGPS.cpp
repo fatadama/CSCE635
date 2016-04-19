@@ -128,6 +128,25 @@ uint8_t emilyGPS::send_command_configure_position_rate(uint8_t*buffer,uint8_t ra
   return 10;
 }
 
+uint8_t emilyGPS::send_command_configure_nmea_message(uint8_t*buffer,uint8_t gga,uint8_t gsa, uint8_t gsv, uint8_t gll, uint8_t rmc, uint8_t vtg, uint8_t zda){
+  //header bytes
+  buffer[0] = 0xA0;buffer[1] = 0xA1;
+  buffer[2] = 0x00;// payload length byte 1 (MSB)
+  buffer[3] = 0x09;// payload length byte 2 (LSB)
+  buffer[4] = 0x08;// message ID
+  buffer[5] = gga;
+  buffer[6] = gsa;
+  buffer[7] = gsv;
+  buffer[8] = gll;
+  buffer[9] = rmc;
+  buffer[10] = vtg;
+  buffer[11] = zda;
+  buffer[12] = 0;// 0 = update to SRAM, 1 = update to SRAM and FLASH
+  buffer[13] = compute_checksum(&buffer[4],9);
+  buffer[14] = 0x0D; buffer[15] = 0x0A;
+  return 16;
+}
+
 uint8_t emilyGPS::send_command_restart_cold(uint8_t*buffer){
   //header bytes
   buffer[0] = 0xA0;buffer[1] = 0xA1;

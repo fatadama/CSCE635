@@ -6,8 +6,6 @@ uint16_t scale_pwm(float val,float low, float high){
 }
 
 emilyControl::emilyControl(){
-  //rudder = 0.0;
-  //throttle = 0.0;
   new_value = 0;
   millis_last = 0;
   // initialize the PID gain

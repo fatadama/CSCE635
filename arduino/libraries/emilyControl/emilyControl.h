@@ -22,7 +22,7 @@ public:
   emilyControl();
   /** Compute periodic tasks
    *
-   * Write out control value, or compute new value & write if fly-by-wire.
+   * Set the control value, or compute new value & write if INDIRECT mode.
    * @param[in] millis the current system time in milliseconds
    * @param[in] status COPY of the global status object - we need the PWM values from ground and the control mode
    */
@@ -35,7 +35,6 @@ public:
   void get_pwm(uint16_t* pwm_rudder,uint16_t* pwm_throttle);
   uint8_t new_control();/*<! Return 1 if the control value has been updated */
 private:
-  //emilyStatus* status; /*<! Pointer to the global status object */
   lowPassFilter rudder;/*<! Lowpass filter object: always low pass the rudder */
   lowPassFilter throttle;/*<! Lowpass filter object: always low pass the throttle */
   uint8_t new_value;

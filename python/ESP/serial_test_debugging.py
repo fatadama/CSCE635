@@ -1,10 +1,13 @@
 ''' Test serial communication using the C extension '''
 
+## @file
+
 import esp
 import time
 import serial
 import struct
 
+## Function for parsing lines from the serial debugging output
 def getfield(strin):
     splt = strin.split(':')
     field = splt[0]
@@ -22,6 +25,7 @@ ctrllog = open('ctrl.csv','w')
 ctrllog.write('systime(sec),rudder(pwm),throttle(pwm),mode(flag),status(flag)\n')
 gpscmd = open('gpscmd.csv','w')
 gpscmd.write('systime(sec),lat(deg),lon(deg),x(m),y(m)\n')
+
 ## Parse the ASCII debug text from the Arduino
 def parse_debug(chBuffer,systime):
     lines = chBuffer.split('\n')
@@ -82,7 +86,7 @@ def parse_debug(chBuffer,systime):
                         outs[3] = val
                 gpscmd.write("%16.4f,%10g,%10g,%d,%d\n" % (systime,outs[0],outs[1],outs[2],outs[3]))
 
-
+## serial port settings
 SERIAL_RATE_HZ = 2.0
 SERIAL_READ_RATE_HZ = 5.0
 SERIAL_PERIOD = 1.0/SERIAL_RATE_HZ
