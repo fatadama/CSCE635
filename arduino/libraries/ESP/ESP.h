@@ -13,39 +13,23 @@
 #define MSG_CONTROL 2
 #define MSG_COMMAND 4
 #define MSG_SET_PID 8
+#define MSG_GPS_POS 16
 
 // message lengths
 #define MSG_GPS_LEN 16
 #define MSG_CONTROL_LEN 12
 #define MSG_COMMAND_LEN 12
 #define MSG_SET_PID_LEN 17
+#define MSG_GPS_POS_LEN 24
 
 // message format: ESP_HEADER1 ESP_HEADER2 MESSAGE_ID <data> CHECKSUM
 
 /** @file */
 
-/** Pack a signed 32 bit integer into an unsigned integer array as 4 bytes. LEAST significant bit comes FIRST
-  * @param[in] uint8_t* buffy array to put values in
-  * @param[in] int32_t var value to put in array
-  */
-inline void pack_int32(uint8_t* buffy,int32_t var){
-	buffy[0] = var & 255;
-	buffy[1] = (var>>8) & 255;
-	buffy[2] = (var>>16) & 255;
-	buffy[3] = (var>>24) & 255;
-};
-
-/** Read a signed 32 bit integer from an unsigned integer array as 4 bytes. LEAST significant bit comes FIRST
-  * @param[in] uint8_t* buffy array to put values in
-  * @param[out] int32_t var value to read from array
-  */
-inline void unpack_int32(uint8_t* buffy, int32_t* var){
-	*var = buffy[0] + (buffy[1]<<8) + (buffy[2]<<16) + (buffy[3]<<24);
-}
-
 /** Parse a message of known length. Determine if the checksum (last byte) in the message matches the checksum in the message.
  * @param[in] msg uint8_t* that contains a message
  * @param[in] msg_len length of the message
+ * @param[out] checksum_valid boolean, true if the checksum in the message matches the computed value
  */
 inline int8_t checksum_valid(uint8_t* msg, uint8_t msg_len){
 	uint8_t chksum = 0,chksum_msg=0;
@@ -283,6 +267,47 @@ inline int8_t esp_unpack_set_pid(uint8_t*msg,uint8_t* ch,float* KP, float* KI, f
 		return msg_counter+1;
 	else
 		return -1;
+}
+
+/** Pack a combined gps/pose message with GPS data plus speed and heading
+ * @param[in] msg buffer for the message
+ * @param[in] lon the longitude in (degrees) x 10^7
+ * @param[in] lat the latitude in (degrees) x 10^7
+ * @param[in] t the time
+ * @param[in] v the speed in m/s
+ * @param[in] hdg the heading in radians
+ * @param[out] msg_len the number of bytes written to the buffer
+ */
+inline int8_t esp_pack_gps_pos(uint8_t*msg,int32_t lon, int32_t lat, float t, float v, float hdg){
+	uint8_t chksum = 0;
+	int8_t msg_counter = 0;
+	msg[msg_counter] = ESP_HEADER1;
+	msg_counter++;//1
+	msg[msg_counter] = ESP_HEADER2;
+	msg_counter++;//2
+	// message ID
+	msg[msg_counter] = MSG_GPS_POS;
+	msg_counter++;//3
+	// pack longitude
+	memcpy(&msg[msg_counter],&lon,4);
+	msg_counter += 4;//7
+	// pack latitude
+	memcpy(&msg[msg_counter],&lat,4);
+	msg_counter += 4;//11
+	// time
+	memcpy(&msg[msg_counter],&t,4);
+	msg_counter += 4;//15
+	//speed (m/s)
+	memcpy(&msg[msg_counter],&v,4);
+	msg_counter += 4;//19
+	// heading (radians)
+	memcpy(&msg[msg_counter],&hdg,4);
+	msg_counter += 4;//23
+	//checksum
+	chksum = compute_checksum(msg,MSG_GPS_POS_LEN);
+	msg[msg_counter]=chksum;
+	msg_counter++;//24
+	return msg_counter;
 }
 
 /** Parse a single byte.
