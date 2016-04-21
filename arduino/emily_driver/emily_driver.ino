@@ -175,12 +175,12 @@ void loop()
   if (gpsSerial.available())
   {
     gpsChar = gpsSerial.read();
-    GPS.parseBytes(gpsChar);
+    GPS.parseBytes(gpsChar,millis_now);
     if(DEBUGGING)
       Serial.print(gpsChar);
   }
   // call periodic functions
-  GPS.misc_tasks();
+  GPS.misc_tasks(millis_now);
   GPS.sync(&stat);
   // update comm status
   //comm.update_status(&stat);

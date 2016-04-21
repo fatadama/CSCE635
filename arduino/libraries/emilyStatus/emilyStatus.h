@@ -18,7 +18,18 @@
 
 double deg2m(int32_t);/*!< Convert a double in (10^-7 degrees) to arc length in meters */
 
-/** Enumated type for the communication health.
+/** Enumerated type for the gps health
+ *
+ * Meanings: HEALTHY less than GPS_TIMEOUT_PERIOD_MS milliseconds since last message (defined in emilyGPS.h)
+ *           LOST more than GPS_TIMEOUT_PERIOD_MS since last message
+ */
+
+enum gpsStatus{
+  GPS_STATUS_HEALTHY=0,
+  GPS_STATUS_LOST=1
+};
+
+/** Enumerated type for the communication health.
  * Meanings: HEALTHY less than 1 second since the last message from the master
  *           WARNING more than 1 second but less than 10 seconds since the last message
  *           LOST more than 10 seconds since the last message
@@ -70,7 +81,7 @@ public:
    * @param[in] hdg "course made good" from GPS in degrees
    */
   void set(int32_t lati, int32_t longi, float ti, float vi, float hdgi);
-  int8_t is_new();/*<! Return the current value of 'new_value' */
+  int8_t is_new();/*<! Return the current value of class member 'new_value' */
   /** Set the value of GPS data object and compute x-y.
    *
    * We use 10^-7 degrees as the units for compatibility with Arduino, which lacks double floating-point precision.
@@ -82,6 +93,7 @@ public:
   void set(int32_t lati,int32_t longi,float ti); /*!< Set the value of GPS data object and compute x-y. Uses long inputs to be compatible with comm protocol */
   void set_home(int32_t lat1,int32_t lon1); /*!< Change from default home lat/lon coordinates to new ones. Units are (10^-7 degrees) */
   void get(float*x,float*y);/*!< Return the current position state for control purposes. Sets the value of new_value to zero */
+  gpsStatus health;/*!< Variable that states if the status of the GPS receiving is OK. See enum definition. */
 private:
   int32_t lat_home;
   int32_t lon_home;

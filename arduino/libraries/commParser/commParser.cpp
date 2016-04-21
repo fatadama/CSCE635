@@ -108,8 +108,9 @@ void commParser::misc_tasks(uint32_t millis,emilyStatus st){ // updates the valu
         next_stream_time_millis[k] = millis + STREAM_PERIOD_GPS;
         if (st.gpsNow.init){
           // send GPS if initialized
-          if (esp_pack_gps(&send_buffer[send_buffer_counter],st.gpsNow.lon,st.gpsNow.lat,st.gpsNow.t) > 0)
-            send_buffer_counter+=MSG_GPS_LEN;
+          if (esp_pack_gps_pos(&send_buffer[send_buffer_counter],st.gpsNow.lon,
+            st.gpsNow.lat,st.gpsNow.t,st.gpsNow.v,st.gpsNow.hdg,(uint8_t)st.gpsNow.health) > 0)
+            send_buffer_counter+=MSG_GPS_POS_LEN;
         }
       }
       if (k == 1){ // control-related message stream

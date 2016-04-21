@@ -10,9 +10,9 @@
 /** After this many milliseconds without receiving a message, set comm mode to LOST */
 #define TIMEOUT_LOST_MILLIS 10000
 /** Target stream period for GPS messages in millliseconds */
-#define STREAM_PERIOD_GPS 1000
+#define STREAM_PERIOD_GPS 200
 /** Target stream period for control messages in milliseconds */
-#define STREAM_PERIOD_CONTROL 1000
+#define STREAM_PERIOD_CONTROL 200
 
 class commParser
 {
@@ -38,7 +38,7 @@ class commParser
 		void misc_tasks(uint32_t millis,emilyStatus st);
 		/** Sync the global status object by setting the comm status variables to match the commParser values
 		 *
-		 * @brief Called after misc_tasks()
+		 * @brief Called immediately after misc_tasks()
 		 */
 		void sync(emilyStatus*st);
 		/** Sync the global status object by setting the received throttle and rudder, and PID values if applicable */

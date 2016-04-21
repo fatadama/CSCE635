@@ -10,12 +10,14 @@ MSG_GPS = 1
 MSG_CONTROL = 2
 MSG_COMMAND = 4
 MSG_SET_PID = 8
+MSG_GPS_POS = 16
 
 # message lengths
 MSG_GPS_LEN = 16
 MSG_CONTROL_LEN = 12
 MSG_COMMAND_LEN = 12
 MSG_SET_PID_LEN = 17
+MSG_GPS_POS_LEN = 25
 
 def message_gps():
     return MSG_GPS
@@ -73,6 +75,10 @@ class espParser():
                     if len(self.buffer[k-1:]) >= MSG_SET_PID_LEN:
                         finalInd = (k-1)+MSG_SET_PID_LEN+1
                         valid = True
+                if id0 == MSG_GPS_POS:
+                    if len(self.buffer[k-1:]) >= MSG_GPS_POS_LEN:
+                        finalInd = (k-1)+MSG_GPS_POS_LEN+1
+                        valid = True
                 if valid:
                     numMsgs=numMsgs+1
                     msgs.append(self.buffer[k-1:finalInd])
@@ -103,6 +109,9 @@ class espParser():
         if (id==MSG_SET_PID):
             (flag,ch,Kp,Ki,Kd) = unpack_set_pid(msgs[0])
             return(flag,ch,Kp,Ki,Kd)
+        if (id==MSG_GPS_POS):
+            (flag,lon,lat,t,v,hdg) = unpack_set_pid(msgs[0])
+            return(flag,lon,lat,t,v,hdg)
 
 ## Return true if a checksum byte in a message is the correct value
 def checksum_valid(msg,msg_len):
@@ -175,6 +184,26 @@ def pack_set_pid(ch,Kp,Ki,Kd):
     buf+=struct.pack('B',compute_checksum(buf,MSG_SET_PID_LEN))
     return buf
 
+## Unpack a combined GPS/heading/speed command message
+# @param[in] lon the longitude in (degrees x 10^7) as a python int
+# @param[in] lat the latitude in (degrees x 10^7) as a python int
+# @param[in] time the time as a python float. Not used by Arduino.
+# @param[in] v the speed (m/s)
+# @param[in] hdg the heading in radians
+# @param[in] status the status byte. 0 == no GPS lock, 1 == GPS lock
+# @param[out] the message. Write to the serial port using write()
+def pack_gps_pos(lon,lat,time,v,hdg):
+    buf = bytes()
+    buf+=struct.pack('%sB' % 3,ESP_HEADER1,ESP_HEADER2,MSG_GPS_POS)
+    buf+=struct.pack('l',lon)
+    buf+=struct.pack('l',lat)
+    buf+=struct.pack('f',time)
+    buf+=struct.pack('f',v)
+    buf+=struct.pack('f',hdg)
+    buf+=struct.pack('B',status)
+    buf+=struct.pack('B',compute_checksum(buf,MSG_GPS_POS_LEN))
+    return buf
+
 ## Unpack a GPS message
 # @param[in] The message from serial.read()
 # @param[out] flag (-1 if the checksum is invalid; else, the number of bytes read)
@@ -241,6 +270,30 @@ def unpack_set_pid(buf):
     else:
         flag = MSG_SET_PID_LEN
     return(flag,ch,Kp,Ki,Kd)
+
+## Unpack a GPS/speed/heading message
+# @param[in] The message from serial.read()
+# @param[out] flag (-1 if the checksum is invalid; else, the number of bytes read)
+# @param[out] lon the longitude in degrees, x 10^7, as a python int
+# @param[out] lat the latitude in degrees, x 10^7, as a python int
+# @param[out] time the time as a python float.
+# @param[out] v the speed in m/s as a python float.
+# @param[out] hsg the heading in radians as a python float.
+# @param[out] status the status byte
+def unpack_gps_pos(buf):
+    # header bytes
+    lon = struct.unpack('l',buf[3:7])[0]
+    lat = struct.unpack('l',buf[7:11])[0]
+    time = struct.unpack('f',buf[11:15])[0]
+    v = struct.unpack('f',buf[15:19])[0]
+    hdg = struct.unpack('f',buf[19:23])[0]
+    status = struct.unpack('B',buf[23])[0]
+    # checksum
+    if not(checksum_valid(buf,MSG_GPS_POS_LEN)):
+        flag = -1
+    else:
+        flag = MSG_GPS_POS_LEN
+    return(flag,lon,lat,time,v,hdg,status)
 
 def main():
     # test function

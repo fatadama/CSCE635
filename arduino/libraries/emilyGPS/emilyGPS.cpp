@@ -5,9 +5,10 @@
 
 emilyGPS::emilyGPS(){
   parseCounter = 0;
+  time_last_millis = 0;
 }
 
-int16_t emilyGPS::parseBytes(char ch){
+int16_t emilyGPS::parseBytes(char ch,uint32_t millis){
   if (ch != '\n' && parseCounter < sentenceSize){
     sentence[parseCounter] = ch;
     parseCounter++;
@@ -17,7 +18,10 @@ int16_t emilyGPS::parseBytes(char ch){
     sentence[parseCounter] = '\0';
     parseCounter = 0;
     // run parser function
-    return(parseSentence());
+    int16_t outVal = parseSentence();
+    if (outVal > 0)
+      time_last_millis = millis;// set the time
+    return outVal;
   }
   return 0;
 }
@@ -30,7 +34,7 @@ int16_t emilyGPS::parseSentence(){
     // check if this is a valid message
     getField(field,2);
     if (strcmp(field,"A") != 0){
-      return -1;
+      return -2;
     }
     // read time
     getField(field,1);
@@ -58,6 +62,7 @@ int16_t emilyGPS::parseSentence(){
     float hdg = atof(field);
     // set the status object including speed and heading
     gpsNow.set(lat,lon,timei,v,hdg);
+    // set the time
     return 1;
   }
   else{
@@ -87,8 +92,14 @@ void emilyGPS::getField(char* buffer, int index)
   buffer[fieldPos] = '\0';
 }
 
-void emilyGPS::misc_tasks(){
-  return;
+void emilyGPS::misc_tasks(uint32_t millis){
+  if (millis - time_last_millis > GPS_TIMEOUT_PERIOD_MS){
+    // set a status member of the gpsNow class object
+    gpsNow.health = GPS_STATUS_LOST;
+  }
+  else{
+    gpsNow.health = GPS_STATUS_HEALTHY;
+  }
 }
 
 uint8_t emilyGPS::compute_checksum(uint8_t*buffer,uint8_t len){
@@ -177,11 +188,14 @@ uint8_t emilyGPS::send_command_restart_cold(uint8_t*buffer){
 
 void emilyGPS::sync(emilyStatus*status){
   if (gpsNow.is_new()){
+    // copy the lat/lon and other data to the global structure
     status->gpsNow.set(gpsNow.lat,gpsNow.lon,gpsNow.t,gpsNow.v,gpsNow.hdg);
     // HACK: call get() to make the gps data no longer new
     float x,y;
     gpsNow.get(&x,&y);
   }
+  // set the status of the global structure
+  status->gpsNow.health = gpsNow.health;
 }
 
 int32_t convertGPS(char* buffer){

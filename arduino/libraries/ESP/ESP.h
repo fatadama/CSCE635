@@ -8,6 +8,12 @@
 #define ESP_HEADER1 127
 #define ESP_HEADER2 83
 
+// return values from unpack() functions
+/** The message header bytes were invalid */
+#define ESP_BAD_MSG -1
+/** The message checksum did not match the computed value */
+#define ESP_BAD_CHECKSUM -2
+
 // message IDs - must be positive and different powers of 2
 #define MSG_GPS 1
 #define MSG_CONTROL 2
@@ -20,7 +26,7 @@
 #define MSG_CONTROL_LEN 12
 #define MSG_COMMAND_LEN 12
 #define MSG_SET_PID_LEN 17
-#define MSG_GPS_POS_LEN 24
+#define MSG_GPS_POS_LEN 25
 
 // message format: ESP_HEADER1 ESP_HEADER2 MESSAGE_ID <data> CHECKSUM
 
@@ -105,7 +111,7 @@ inline int8_t esp_unpack_gps(uint8_t*msg,int32_t* lon, int32_t* lat, float* time
 	if (checksum_valid(msg,MSG_GPS_LEN))
 		return msg_counter+1;
 	else
-		return -1;
+		return ESP_BAD_CHECKSUM;
 };
 
 /** @brief Pack a low-level control message
@@ -145,7 +151,7 @@ inline int8_t esp_pack_control(uint8_t*msg,float rudd, float thro){
 inline int8_t esp_unpack_control(uint8_t*msg,float* rudd, float* thro){
 	//check the header bytes
 	if (msg[0] != ESP_HEADER1 | msg[1] != ESP_HEADER2)
-		return -1;
+		return ESP_BAD_MSG;
 	// parse data
 	int8_t msg_counter = 3;
 	//rudder
@@ -158,7 +164,7 @@ inline int8_t esp_unpack_control(uint8_t*msg,float* rudd, float* thro){
 	if (checksum_valid(msg,MSG_CONTROL_LEN))
 		return msg_counter+1;
 	else
-		return -1;
+		return ESP_BAD_CHECKSUM;
 }
 
 /** @brief Pack a higher-level command with a desired direction and speed
@@ -192,7 +198,7 @@ inline int8_t esp_pack_command(uint8_t*msg,float hdg, float speed){
 inline int8_t esp_unpack_command(uint8_t*msg,float* hdg, float* speed){
 	//check the header bytes
 	if (msg[0] != ESP_HEADER1 | msg[1] != ESP_HEADER2)
-		return -1;
+		return ESP_BAD_MSG;
 	// parse data
 	int8_t msg_counter = 3;
 	//hdg
@@ -205,7 +211,7 @@ inline int8_t esp_unpack_command(uint8_t*msg,float* hdg, float* speed){
 	if (checksum_valid(msg,MSG_COMMAND_LEN))
 		return msg_counter+1;
 	else
-		return -1;
+		return ESP_BAD_CHECKSUM;
 }
 
 /** @brief Pack a PID message to set PID gains
@@ -247,7 +253,7 @@ inline int8_t esp_pack_set_pid(uint8_t*msg,uint8_t ch,float KP, float KI, float 
 inline int8_t esp_unpack_set_pid(uint8_t*msg,uint8_t* ch,float* KP, float* KI, float* KD){
 	//check the header bytes
 	if (msg[0] != ESP_HEADER1 | msg[1] != ESP_HEADER2)
-		return -1;
+		return ESP_BAD_MSG;
 	// parse data
 	int8_t msg_counter = 3;
 	// channel
@@ -266,7 +272,7 @@ inline int8_t esp_unpack_set_pid(uint8_t*msg,uint8_t* ch,float* KP, float* KI, f
 	if (checksum_valid(msg,MSG_SET_PID_LEN))
 		return msg_counter+1;
 	else
-		return -1;
+		return ESP_BAD_CHECKSUM;
 }
 
 /** Pack a combined gps/pose message with GPS data plus speed and heading
@@ -276,9 +282,10 @@ inline int8_t esp_unpack_set_pid(uint8_t*msg,uint8_t* ch,float* KP, float* KI, f
  * @param[in] t the time
  * @param[in] v the speed in m/s
  * @param[in] hdg the heading in radians
+ * @param[in] status the status of GPS. 0 == no lock, 1 == lock
  * @param[out] msg_len the number of bytes written to the buffer
  */
-inline int8_t esp_pack_gps_pos(uint8_t*msg,int32_t lon, int32_t lat, float t, float v, float hdg){
+inline int8_t esp_pack_gps_pos(uint8_t*msg,int32_t lon, int32_t lat, float t, float v, float hdg, uint8_t status){
 	uint8_t chksum = 0;
 	int8_t msg_counter = 0;
 	msg[msg_counter] = ESP_HEADER1;
@@ -303,11 +310,55 @@ inline int8_t esp_pack_gps_pos(uint8_t*msg,int32_t lon, int32_t lat, float t, fl
 	// heading (radians)
 	memcpy(&msg[msg_counter],&hdg,4);
 	msg_counter += 4;//23
+	// the status byte
+	memcpy(&msg[msg_counter],&status,1);
+	msg_counter += 1;//24
 	//checksum
 	chksum = compute_checksum(msg,MSG_GPS_POS_LEN);
 	msg[msg_counter]=chksum;
-	msg_counter++;//24
+	msg_counter++;//25
 	return msg_counter;
+}
+
+/** Unpack a combined gps/pose message with GPS data plus speed and heading
+ * @param[in] msg buffer with the message
+ * @param[in] lon pointer to place the longitude in (degrees) x 10^7
+ * @param[in] lat pointer to place the latitude in (degrees) x 10^7
+ * @param[in] t pointer to place the time
+ * @param[in] v pointer to place the speed in m/s
+ * @param[in] hdg pointer to place the heading in radians
+ * @param[in] status pointer to place the status byte in
+ * @param[out] msg_len the number of bytes written to the buffer
+ */
+inline int8_t esp_unpack_gps_pos(uint8_t*msg,int32_t* lon, int32_t* lat, float* t, float* v, float* hdg,uint8_t* status){
+	//check the header bytes
+	if (msg[0] != ESP_HEADER1 | msg[1] != ESP_HEADER2 | msg[2] != MSG_GPS_POS)
+		return ESP_BAD_MSG;
+	// parse data
+	int8_t msg_counter = 3;
+	// longitude
+	memcpy(lon,&msg[msg_counter],4);
+	msg_counter+=4;//7
+	// latitude
+	memcpy(lat,&msg[msg_counter],4);
+	msg_counter+=4;//11
+	// time
+	memcpy(t,&msg[msg_counter],4);
+	msg_counter+=4;//15
+	// speed (m/s)
+	memcpy(v,&msg[msg_counter],4);
+	msg_counter+=4;//19
+	// heading (rads)
+	memcpy(hdg,&msg[msg_counter],4);
+	msg_counter+=4;//23
+	// status
+	memcpy(status,&msg[msg_counter],1);
+	msg_counter+=1;//24
+	// determine if message is valid
+	if (checksum_valid(msg,MSG_GPS_POS))
+		return msg_counter+1;//25
+	else
+		return ESP_BAD_CHECKSUM;
 }
 
 /** Parse a single byte.
@@ -321,7 +372,6 @@ inline int8_t esp_pack_gps_pos(uint8_t*msg,int32_t lon, int32_t lat, float t, fl
 inline int8_t esp_parse_byte(uint8_t byte, uint8_t*buffy){
 	static int msg_counter = 0;
 	static int msg_len = -1;
-	//printf("parse_byte: %d,%d,%d\n",msg_counter,msg_len,byte);
 	if (msg_counter==0){
 		if (byte!=ESP_HEADER1){
 			msg_len = -1;//reset the length
@@ -350,6 +400,9 @@ inline int8_t esp_parse_byte(uint8_t byte, uint8_t*buffy){
 			case MSG_SET_PID:
 				msg_len = MSG_SET_PID_LEN;
 				break;
+			case MSG_GPS_POS:
+				msg_len = MSG_GPS_POS_LEN;
+				break;
 			default:
 				msg_counter=0;
 				msg_len=-1;
@@ -369,7 +422,7 @@ inline int8_t esp_parse_byte(uint8_t byte, uint8_t*buffy){
 		else{
 			msg_counter = 0;
 			msg_len = -1;
-			return -2;
+			return ESP_BAD_CHECKSUM;
 		}
 	}
 	msg_counter++;
