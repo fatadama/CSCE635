@@ -17,7 +17,8 @@ class emilyControl{
 public:
   /** Constructor
    *
-   * @param[in] st pointer to the global status object
+   * Initializes the PID objects to zero
+   * Initializes the lowpass objects for the commanded rudder and throttle to a filter constant of 0.1.
    */
   emilyControl();
   /** Compute periodic tasks
@@ -29,8 +30,8 @@ public:
   void misc_tasks(uint32_t millis,emilyStatus status);
   /** Return the PWM values to apply for the rudder and throttle.
    *
-   * @param[out] pwm_rudder rudder PWM expressed in [0,255].
-   * @param[out] pwm_throttle throttle PWM expressed in [0,255]
+   * @param[out] pwm_rudder rudder PWM expressed in [1000,2000] ms.
+   * @param[out] pwm_throttle throttle PWM expressed in [1000,2000] ms.
    */
   void get_pwm(uint16_t* pwm_rudder,uint16_t* pwm_throttle);
   uint8_t new_control();/*<! Return 1 if the control value has been updated */

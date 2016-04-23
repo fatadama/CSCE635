@@ -8,6 +8,7 @@ commParser::commParser(){
   // set the stream times to zero
   next_stream_time_millis[0] = 0;
   next_stream_time_millis[1] = 0;
+  next_stream_time_millis[2] = 0;
   // sest number of messages to zero
   received_messages = 0;
   // default comm status is lost
@@ -51,8 +52,7 @@ void commParser::handleMsg(){
       else//increment the bad packet counter
         bad_packets++;
       break;
-    case MSG_CONTROL:/** Direct control of rudder/throttle */
-      //float rudd,thro;
+    case MSG_CONTROL:/** Direct offboard control of rudder/throttle */
       if (esp_unpack_control(msg,&control_rudder, &control_throttle) > 0){
         //set status rudder, throttle, and mode
         control_mode = CONTROL_MODE_DIRECT;
@@ -122,6 +122,11 @@ void commParser::misc_tasks(uint32_t millis,emilyStatus st){ // updates the valu
         else if(control_mode == CONTROL_MODE_INDIRECT){// in INDIRECT mode, send the current rudder and throttle settings
           continue;//TODO stream messages after we add this functionality
         }
+      }
+      if (k == 2){ // send a heartbeat
+        next_stream_time_millis[k] = millis + STREAM_PERIOD_HEARTBEAT;
+        esp_pack_heartbeat(&send_buffer[send_buffer_counter],ESP_ID_BOAT,ESP_ID_GROUNDSTATION,(1.0e-3*millis));
+        send_buffer_counter+=MSG_HEARTBEAT_LEN;
       }
     }
   }

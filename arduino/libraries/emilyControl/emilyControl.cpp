@@ -17,6 +17,9 @@ emilyControl::emilyControl(){
   throttle_pid.set_Ki(0.0);
   throttle_pid.set_Kd(0.0);
   throttle_pid.set_integral_max(0.1);
+  // initialize the lowpass objects for the throttle and rudder commanded
+  throttle.set_alpha(0.1);
+  rudder.set_alpha(0.1);
 }
 
 void emilyControl::misc_tasks(uint32_t millis,emilyStatus status){
@@ -27,14 +30,13 @@ void emilyControl::misc_tasks(uint32_t millis,emilyStatus status){
       // write out zeros
       throttle.update(0.0);
       rudder.update(0.0);
-      // FLAG that there is new data in the control object
-      new_value = 1;
     }
     if (status.control_mode == CONTROL_MODE_DIRECT){ //offboard control
       // read from status object
       throttle.update(status.control_throttle);
       rudder.update(status.control_rudder);
     }
+    /*
     if (status.control_mode == CONTROL_MODE_INDIRECT){ // automatic control
       // set the gains if new values
       // check if the GPS data are new
@@ -44,7 +46,7 @@ void emilyControl::misc_tasks(uint32_t millis,emilyStatus status){
       // not implemented yet: write out zeros
       throttle.update(0.0);
       rudder.update(0.0);
-    }
+    }*/
     // FLAG that there is new data in the control object
     new_value = 1;
   }

@@ -14,12 +14,23 @@
 /** The message checksum did not match the computed value */
 #define ESP_BAD_CHECKSUM -2
 
+// identifiers for machines involved in the communication. Currently the IDs are pro forma and not used
+#define ESP_ID_BOAT 1
+#define ESP_ID_GROUNDSTATION 2
+
 // message IDs - must be positive and different powers of 2
+/** GPS message with longitude, latitude, and time */
 #define MSG_GPS 1
+/** Control message with rudder and throttle value */
 #define MSG_CONTROL 2
+/** Commanded speed and heading message */
 #define MSG_COMMAND 4
+/** Message to set onboard PID values */
 #define MSG_SET_PID 8
+/** GPS message with longitude, latitude, time, speed, and heading */
 #define MSG_GPS_POS 16
+/** Heartbeat message with source byte, destination byte, and source time (float)*/
+#define MSG_HEARTBEAT 32
 
 // message lengths
 #define MSG_GPS_LEN 16
@@ -27,8 +38,9 @@
 #define MSG_COMMAND_LEN 12
 #define MSG_SET_PID_LEN 17
 #define MSG_GPS_POS_LEN 25
+#define MSG_HEARTBEAT_LEN 10
 
-// message format: ESP_HEADER1 ESP_HEADER2 MESSAGE_ID <data> CHECKSUM
+// message format: ESP_HEADER1, ESP_HEADER2, MESSAGE_ID, <data>, CHECKSUM
 
 /** @file */
 
@@ -320,6 +332,39 @@ inline int8_t esp_pack_gps_pos(uint8_t*msg,int32_t lon, int32_t lat, float t, fl
 	return msg_counter;
 }
 
+/** Pack a combined gps/pose message with GPS data plus speed and heading
+ * @param[in] msg buffer for the message
+ * @param[in] source_id identity of the machine sending the message
+ * @param[in] dest_id identity the message is intended for; not used, but may be wanted in future
+ * @param[in] syst the system time of the source machine
+ * @param[out] msg_len the number of bytes written to the buffer
+ */
+inline int8_t esp_pack_heartbeat(uint8_t*msg,uint8_t source_id, uint8_t dest_id, float syst){
+	uint8_t chksum = 0;
+	int8_t msg_counter = 0;
+	msg[msg_counter] = ESP_HEADER1;
+	msg_counter++;//1
+	msg[msg_counter] = ESP_HEADER2;
+	msg_counter++;//2
+	// message ID
+	msg[msg_counter] = MSG_HEARTBEAT;
+	msg_counter++;//3
+	// pack source_id
+	memcpy(&msg[msg_counter],&source_id,1);
+	msg_counter += 1;//4
+	// pack dest_id
+	memcpy(&msg[msg_counter],&dest_id,1);
+	msg_counter += 1;//5
+	// system time
+	memcpy(&msg[msg_counter],&syst,4);
+	msg_counter += 4;//9
+	//checksum
+	chksum = compute_checksum(msg,MSG_HEARTBEAT_LEN);
+	msg[msg_counter]=chksum;
+	msg_counter++;//10
+	return msg_counter;
+}
+
 /** Unpack a combined gps/pose message with GPS data plus speed and heading
  * @param[in] msg buffer with the message
  * @param[in] lon pointer to place the longitude in (degrees) x 10^7
@@ -357,6 +402,34 @@ inline int8_t esp_unpack_gps_pos(uint8_t*msg,int32_t* lon, int32_t* lat, float* 
 	// determine if message is valid
 	if (checksum_valid(msg,MSG_GPS_POS))
 		return msg_counter+1;//25
+	else
+		return ESP_BAD_CHECKSUM;
+}
+
+/** Unpack a heartbeat message
+	*
+	* @param[in] msg the message Buffer
+	* @param[out] source_id the pointer at which to set the source_id bytes
+	* @param[out] dest_id pointer where the destination ID byte goes. Not currently used.
+	* @param[out] syst pointer where the system time of the source of this message goes. Not currently used.
+	*/
+inline int8_t esp_unpack_heartbeat(uint8_t*msg,uint8_t* source_id, uint8_t* dest_id, float* syst){
+	//check the header bytes
+	if (msg[0] != ESP_HEADER1 | msg[1] != ESP_HEADER2 | msg[2] != MSG_GPS_POS)
+		return ESP_BAD_MSG;
+	// parse data
+	int8_t msg_counter = 3;
+	// source id
+	memcpy(source_id,&msg[msg_counter],1);
+	msg_counter+=1;//4
+	// destination id
+	memcpy(dest_id,&msg[msg_counter],1);
+	msg_counter+=1;//5
+	// system time
+	memcpy(syst,&msg[msg_counter],4);
+	msg_counter+=4;//9
+	if (checksum_valid(msg,MSG_HEARTBEAT))
+		return msg_counter+1;//10
 	else
 		return ESP_BAD_CHECKSUM;
 }

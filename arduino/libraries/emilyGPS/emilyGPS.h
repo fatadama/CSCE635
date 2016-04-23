@@ -42,7 +42,11 @@ public:
   uint8_t send_command_configure_position_rate(uint8_t*buffer,uint8_t rate);
   /** Send command to perform a cold restart */
   uint8_t send_command_restart_cold(uint8_t*buffer);
-  /** Send command to configure which messages are sent from GPS */
+  /** Send command to configure which messages are sent from GPS
+   *
+   * Each argument is supposed to be the "interval" of the associated message, in seconds, as a byte 0-255. 0 means disabled. I don't know if 1 means message/update period, 2 means message/(2 update periods), or what... using 1 seems to produce full-rate messages.
+   * the message types are defined by the NMEA standard. RMC messages contain lon/lat and speed/heading, which are all we need, so in practice all other messages are disabled.
+   */
   uint8_t send_command_configure_nmea_message(uint8_t*buffer,uint8_t gga,uint8_t gsa, uint8_t gsv, uint8_t gll, uint8_t rmc, uint8_t vtg, uint8_t zda);
   /** Return new GPS data. Call after misc_tasks to make sure that the global GPS value matches the local one here. */
   void sync(emilyStatus*st);
