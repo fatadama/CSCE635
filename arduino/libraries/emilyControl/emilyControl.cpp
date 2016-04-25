@@ -5,6 +5,11 @@ uint16_t scale_pwm(float val,float low, float high){
   return uint16_t ( (1000.0*(val+high)-2000.0*low)/(high-low) );
 }
 
+//x = ((low-val)*2000+(val-high)*1500)/(low-high)
+uint16_t scale_pwm_throttle(float val, float low, float high){
+  return uint16_t ( ((low-val)*2000.0+(val-high)*1500.0)/(low-high) );
+}
+
 emilyControl::emilyControl(){
   new_value = 0;
   millis_last = 0;
@@ -53,8 +58,10 @@ void emilyControl::misc_tasks(uint32_t millis,emilyStatus status){
 }
 
 void emilyControl::get_pwm(uint16_t* pwm_rudder,uint16_t* pwm_throttle){
+  // map rudder to (1000,2000)
   *pwm_rudder = scale_pwm(rudder.get_x(),-1.0,1.0);
-  *pwm_throttle = scale_pwm(throttle.get_x(),0.0,1.0);
+  // NEW specific mapping for throttle from (1500,2000)
+  *pwm_throttle = scale_pwm_throttle(throttle.get_x(),0.0,1.0);
   // FLAG that the control value has been accessed
   new_value = 0;
 }

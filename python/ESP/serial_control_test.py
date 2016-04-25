@@ -36,6 +36,8 @@ key_thread = threading.Thread(target=keyboard_thread.input,args=(keyboard_queue,
 ## serial port settings
 SERIAL_RATE_HZ = 10.0
 SERIAL_PERIOD = 1.0/SERIAL_RATE_HZ
+HEARTBEAT_RATE_HZ = 1.0
+HEARTBEAT_PERIOD = 1.0/HEARTBEAT_RATE_HZ
 PORT = '/dev/ttyUSB0'
 
 DEBUG_PORT = '/dev/ttyACM0'
@@ -46,11 +48,14 @@ print("Opening port" + PORT)
 ser.open()
 
 counter = 0
-tnext = time.time() + SERIAL_PERIOD
+tNow = time.time()
+tnext = tNow + SERIAL_PERIOD
+theartbeat = tNow + HEARTBEAT_PERIOD
 ch = ''
 parser = esp.espParser()
 
 rudderCmd = 0.0
+throttleCmd = 0.0
 
 # start keyboard thread
 key_thread.start()
@@ -73,10 +78,29 @@ try:
                     rudderCmd = 1.0
                 elif rudderCmd < -1.0:
                     rudderCmd = -1.0
-                print("Rudder to %f" % (rudderCmd))
+                #print("Rudder to %f" % (rudderCmd))
+                if line[0] == 'w':
+                    throttleCmd = throttleCmd + 0.10
+                if line[0] == 's':
+                    throttleCmd = throttleCmd - 0.10
+                if throttleCmd > 1.0:
+                    throttleCmd = 1.0
+                elif throttleCmd < 0.0:
+                    throttleCmd = 0.0
+                if line[0] == 'x':
+                    throttleCmd = 0.0
+                    rudderCmd = 0.0
+                #print("Throttle to %f" % (throttleCmd))
+                print("R=%d,T=%d" % (rudderCmd,throttleCmd))
             except Queue.Empty:
                 pass
-        if time.time() >= tnext:
+        tNow = time.time()
+        if tNow >= theartbeat:
+            (msg) = esp.pack_heartbeat(esp.ESP_ID_GROUNDSTATION,esp.ESP_ID_BOAT,tNow)
+            if len(msg) > 0:
+                ser.write(msg)
+            theartbeat = theartbeat + HEARTBEAT_PERIOD
+        if tNow >= tnext:
             #print(ch)
             (num,msgs) = parser.parseBytes(ch)
             #if not(type(out) == int):
@@ -90,16 +114,19 @@ try:
                     print("COMM GPS: %d,%d,%f" % (lon,lat,t))
                 if msg_id == esp.message_control():
                     (len2,rudd,thro) = esp.unpack_control(msg)
-                    print("COMM CONTROL: %f,%f,t=%f" % (rudd,thro,time.time()))
+                    print("COMM CONTROL: %f,%f,t=%f" % (rudd,thro,tNow))
                 if msg_id == esp.message_command():
                     (len2,hdg,spd) = esp.unpack_command(msg)
                     print("COMM COMMAND: %f,%f" % (hdg,spd))
                 if msg_id == esp.message_set_pid():
                     (len2,ch0,Kp,Ki,Kd) = esp.unpack_set_pid(msg)
                     print("COMM SET_PID: %i,%f,%f,%f" % (ch0,Kp,Ki,Kd))
+                if msg_id == esp.message_heartbeat():
+                    (len2,source_id,dest_id,syst) = esp.unpack_heartbeat(msg)
+                    print("COMM HEARTBEAT: %i,%i,%f" % (source_id,dest_id,syst))
             ch = ''
             tnext = tnext + SERIAL_PERIOD
-            (msg) = esp.pack_control(rudderCmd,0.0)
+            (msg) = esp.pack_control(rudderCmd,throttleCmd)
             if len(msg) > 0:
                 ser.write(msg)
                 #print("Sent test control message")

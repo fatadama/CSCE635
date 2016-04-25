@@ -198,7 +198,7 @@ void emilyGPS::sync(emilyStatus*status){
   status->gpsNow.health = gpsNow.health;
   // set the control mode to PASSIVE if GPS is bad
   if (gpsNow.health == GPS_STATUS_LOST){
-    status->controlMode = CONTROL_MODE_PASSIVE;
+    status->control_mode = CONTROL_MODE_PASSIVE;
   }
 }
 

@@ -15,6 +15,8 @@
 #define STREAM_PERIOD_CONTROL 200
 /** Target stream rate for heartbeat in milliseconds */
 #define STREAM_PERIOD_HEARTBEAT 1000
+/** number of messages that get streamed */
+#define NUM_MSGS_STREAMED 3
 
 class commParser
 {
@@ -58,7 +60,7 @@ class commParser
 		uint32_t bad_checksums;/*!< counter for number of bad checksums received */
 		uint32_t bad_packets;/*!< counter for rejected packets. If this increments, we probably have a problem in the parser. */
 		uint32_t last_message_millis;/*!< last message receive time in millis */
-		uint32_t next_stream_time_millis[3];/*!< Target times at which to send messages that are streamed periodically */
+		uint32_t next_stream_time_millis[NUM_MSGS_STREAMED];/*!< Target times at which to send messages that are streamed periodically */
 		uint8_t send_buffer[256]; /*!< Message buffer used to send messages */
 		uint8_t send_buffer_counter;/*!< Counter for tracking the length of the send buffer */
 		uint8_t send_buffer_counter_helper;/*!< Counts how many bytes we've sent out of total */

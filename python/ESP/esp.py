@@ -11,6 +11,11 @@ MSG_CONTROL = 2
 MSG_COMMAND = 4
 MSG_SET_PID = 8
 MSG_GPS_POS = 16
+MSG_HEARTBEAT = 32
+
+# identifier for message heartbeats (not used)
+ESP_ID_BOAT = 1
+ESP_ID_GROUNDSTATION = 2
 
 # message lengths
 MSG_GPS_LEN = 16
@@ -18,6 +23,7 @@ MSG_CONTROL_LEN = 12
 MSG_COMMAND_LEN = 12
 MSG_SET_PID_LEN = 17
 MSG_GPS_POS_LEN = 25
+MSG_HEARTBEAT_LEN = 10
 
 def message_gps():
     return MSG_GPS
@@ -30,6 +36,9 @@ def message_set_pid():
 
 def message_command():
     return MSG_COMMAND
+
+def message_heartbeat():
+    return MSG_HEARTBEAT
 
 ## Parser class for handling messages
 class espParser():
@@ -78,6 +87,10 @@ class espParser():
                 if id0 == MSG_GPS_POS:
                     if len(self.buffer[k-1:]) >= MSG_GPS_POS_LEN:
                         finalInd = (k-1)+MSG_GPS_POS_LEN+1
+                        valid = True
+                if id0 == MSG_HEARTBEAT:
+                    if len(self.buffer[k-1:]) >= MSG_HEARTBEAT_LEN:
+                        finalInd = (k-1)+MSG_HEARTBEAT_LEN+1
                         valid = True
                 if valid:
                     numMsgs=numMsgs+1
@@ -204,6 +217,15 @@ def pack_gps_pos(lon,lat,time,v,hdg):
     buf+=struct.pack('B',compute_checksum(buf,MSG_GPS_POS_LEN))
     return buf
 
+def pack_heartbeat(source_id,dest_id,systime):
+    buf = bytes()
+    buf+=struct.pack('%sB' % 3,ESP_HEADER1,ESP_HEADER2,MSG_HEARTBEAT)
+    buf+=struct.pack('B',source_id)
+    buf+=struct.pack('B',dest_id)
+    buf+=struct.pack('f',systime)
+    buf+=struct.pack('B',compute_checksum(buf,MSG_HEARTBEAT_LEN))
+    return buf
+
 ## Unpack a GPS message
 # @param[in] The message from serial.read()
 # @param[out] flag (-1 if the checksum is invalid; else, the number of bytes read)
@@ -294,6 +316,17 @@ def unpack_gps_pos(buf):
     else:
         flag = MSG_GPS_POS_LEN
     return(flag,lon,lat,time,v,hdg,status)
+
+def unpack_heartbeat(buf):
+    source_id = struct.unpack('B',buf[3])[0]
+    dest_id = struct.unpack('B',buf[4])[0]
+    systime = struct.unpack('f',buf[5:9])[0]
+    # checksum
+    if not(checksum_valid(buf,MSG_HEARTBEAT_LEN)):
+        flag = -1
+    else:
+        flag = MSG_HEARTBEAT_LEN
+    return (flag,source_id,dest_id,systime)
 
 def main():
     # test function

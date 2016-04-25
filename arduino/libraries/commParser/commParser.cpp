@@ -6,9 +6,8 @@ commParser::commParser(){
   bad_checksums=0;
   bad_packets=0;
   // set the stream times to zero
-  next_stream_time_millis[0] = 0;
-  next_stream_time_millis[1] = 0;
-  next_stream_time_millis[2] = 0;
+  for(int i = 0;i<NUM_MSGS_STREAMED;i++)
+    next_stream_time_millis[i] = 0;
   // sest number of messages to zero
   received_messages = 0;
   // default comm status is lost
@@ -102,7 +101,7 @@ void commParser::misc_tasks(uint32_t millis,emilyStatus st){ // updates the valu
   send_buffer_counter = 0;
   send_buffer_counter_helper = 0;
   // send periodic messages
-  for(int k = 0;k<2;k++){
+  for(int k = 0;k<NUM_MSGS_STREAMED;k++){
     if (next_stream_time_millis[k] <= millis){
       if (k == 0){ // GPS stream, send current GPS
         next_stream_time_millis[k] = millis + STREAM_PERIOD_GPS;

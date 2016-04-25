@@ -176,8 +176,8 @@ void loop()
   {
     gpsChar = gpsSerial.read();
     GPS.parseBytes(gpsChar,millis_now);
-    if(DEBUGGING)
-      Serial.print(gpsChar);
+    //if(DEBUGGING)
+      //Serial.print(gpsChar);
   }
   // call periodic functions
   GPS.misc_tasks(millis_now);

@@ -9,8 +9,23 @@
 /** Target automatic control rate execution in Hz */
 #define EMILYCONTROL_RATE_MILLIS 100
 
-/** Scale a floating point 'val between 'low' and 'high' to the PWM output range of [1000,2000] */
+/** Scale a floating point 'val' between 'low' and 'high' to the PWM output range of [1000,2000]
+ *
+ * @detail Background: Linear mapping such that b*y + c = x, such that:
+                                                low*b + c = 1000
+                                                high*b + c = 2000
+                                            Solution:
+                                                b = 1000/(high-low)
+                                                c = (2000*low-1000*high)/(low-high)
+                                            x = ((low-val)*2000+(val-high)*1000)/(low-high)
+
+ */
 uint16_t scale_pwm(float val,float low, float high);
+/** Specific mapping for the throttle channel, which needs to be mapped from [1500,2000]
+ *
+ * x = ((low-val)*2000+(val-high)*1500)/(low-high)
+ */
+uint16_t scale_pwm_throttle(float val, float low, float high);
 
 /*! Control class. Handles the mode logic and either passes through control values in DIRECT mode, sets zeros in PASSIVE mode, or computes onboard in INDIRECT mode */
 class emilyControl{
