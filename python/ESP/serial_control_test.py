@@ -40,12 +40,10 @@ HEARTBEAT_RATE_HZ = 1.0
 HEARTBEAT_PERIOD = 1.0/HEARTBEAT_RATE_HZ
 PORT = '/dev/ttyUSB0'
 
-DEBUG_PORT = '/dev/ttyACM0'
-
 ser = serial.Serial(PORT,9600,timeout=0.01)
 print("Opening port" + PORT)
 
-ser.open()
+#ser.open()
 
 counter = 0
 tNow = time.time()
