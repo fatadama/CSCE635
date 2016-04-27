@@ -16,7 +16,7 @@ SMOOTH_ALPHA = 0.1
 def lowpass(xlast,xnew,alpha):
     return alpha*xnew + (1.0-alpha)*xlast
 
-class gpsState():
+class gps_state():
     def __init__(self):
         # longitude (degrees) positive == east
         self.lon = 0.0
@@ -68,6 +68,6 @@ class gpsState():
 class xbee_bridge_state():
     def __init__(self):
         ## gpsState object for holding the state of EMILY
-        gpsState gps_state();
+        self.gpsState = gps_state();
         ## control mode
         return
