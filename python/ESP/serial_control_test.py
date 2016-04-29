@@ -2,7 +2,7 @@
 
 ## @file
 
-import esp
+import esp_python as esp
 import time
 import serial
 import struct
