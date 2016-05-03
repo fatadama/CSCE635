@@ -11,7 +11,7 @@ y0 = Y_TARG(1,:)'+x(4:7);
 for k = 1:length(T_TARG)-1
     [~,Y1] = ode45(EQOM,[T_TARG(k) T_TARG(k+1)],y0,odeset(),x,UC(k,:));
     err = Y1(end,:)-Y_TARG(k+1,:);
-    f = f + sum(err.^2);
+    f = f + sum(err(3:4).^2);
     y0 = Y1(end,:)';
 end
 

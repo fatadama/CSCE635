@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "emilyGPS.h"
 
 emilyGPS::emilyGPS(){
@@ -60,8 +61,21 @@ int16_t emilyGPS::parseSentence(){
     // read the heading in "course made good"
     getField(field,8);
     float hdg = atof(field);
-    // set the status object including speed and heading
-    gpsNow.set(lat,lon,timei,v,hdg);
+    // if gpsNow is initialized, set gpsLast to gpsNow
+    if (gpsNow.init){
+      gpsLast.lon = gpsNow.lon;
+      gpsLast.lat = gpsNow.lat;
+      gpsLast.t = gpsNow.t;
+      gpsLast.x = gpsNow.x;
+      gpsLast.y = gpsNow.y;
+      gpsLast.v = gpsNow.v;
+      gpsLast.hdg = gpsNow.hdg;
+    }
+    // do outlier rejection
+    if ( acceptGps(&gpsNow,&gpsLast)){}
+      // set the status object including speed and heading
+      gpsNow.set(lat,lon,timei,v,hdg);
+    }
     // set the time
     return 1;
   }
@@ -227,4 +241,23 @@ int32_t convertTime(char*buffer){
   int32_t min = int32_t(1.0e-2*time);
   int32_t sec = time-(1e2*min);
   return (sec + min*60 + hr*3600);
+}
+
+bool acceptGps(gpsData*g,gpsData*glast){
+  // if time decreases, reject
+  if(g->t < glast->t)
+    return false;
+  if(g->t-glast->t > 1000.0)
+    return false;
+  if ( (fabs(g->x-glast->x) > 100.0) || (fabs(g->y-glast->y) > 100.0) )
+    return false;
+  if (fabs(g->v-glast->v) > 10.0)
+    return false;
+  if (fabs(g->hdg-glast->hdg) > 3.14159)
+    return false;
+  if (fabs(g->hdg) > 6.28318)
+    return false;
+  if (fabs(g->v) > 100.0)
+    return false;
+  return true;
 }

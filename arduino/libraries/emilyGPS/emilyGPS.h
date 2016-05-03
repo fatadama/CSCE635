@@ -57,6 +57,7 @@ private:
   void getField(char* buffer, int index);/** Read a field from sentence */
   uint8_t compute_checksum(uint8_t*buffer,uint8_t len);/** Compute the checksum for Venus638FLPx binary commands */
   gpsData gpsNow;/*!< GPS object to store new values in */
+  gpsData gpsLast;/*!< GPS object to store the previous value of GPS */
   uint32_t time_last_millis;/*!< Last time of good GPS message, in milliseconds (system time) */
 };
 
@@ -68,5 +69,7 @@ int32_t convertGPS(char* buffer);
 int32_t convertTime(char*buffer);
 /** Convert GPS time field to a UTC time in seconds (FLOAT) since midnight. Rolls over at midnight UTC! */
 float convertTimef(char*buffer);
+/** Outlier rejection for GPS data */
+bool acceptGps(gpsData*g,gpsData*glast);
 
 #endif

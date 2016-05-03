@@ -47,7 +47,7 @@ fprintf('Reject %d gps\n',length(rej));
 acc = setdiff(1:length(gps),rej);
 
 % plot histories
-lbls = {'X(m)','Y(m)','V(m/s)','hdg(rad)','u_r','u_t'};
+lbls = {'X(m)','Y(m)','V(m/s)','hdg(rad)','u_t','u_r'};
 for k = 1:6
     subplot(3,2,k);
     if k < 5
@@ -89,7 +89,7 @@ end
 figure;
 clf;
 % plot histories
-lbls = {'X(m)','Y(m)','V(m/s)','hdg(rad)','u_r','u_t'};
+lbls = {'X(m)','Y(m)','V(m/s)','hdg(rad)','u_t','u_r'};
 for k = 1:6
     subplot(3,2,k);
     if k < 5
