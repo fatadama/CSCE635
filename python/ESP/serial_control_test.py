@@ -38,7 +38,7 @@ SERIAL_RATE_HZ = 10.0
 SERIAL_PERIOD = 1.0/SERIAL_RATE_HZ
 HEARTBEAT_RATE_HZ = 1.0
 HEARTBEAT_PERIOD = 1.0/HEARTBEAT_RATE_HZ
-PORT = '/dev/ttyUSB0'
+PORT = 'COM4'
 
 ser = serial.Serial(PORT,9600,timeout=0.01)
 print("Opening port" + PORT)

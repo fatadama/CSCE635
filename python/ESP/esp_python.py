@@ -37,6 +37,9 @@ def message_set_pid():
 def message_command():
     return MSG_COMMAND
 
+def message_gps_pos():
+    return MSG_GPS_POS
+
 def message_heartbeat():
     return MSG_HEARTBEAT
 
@@ -63,6 +66,8 @@ class espParser():
         for k in range(1,len(self.buffer)-1):
             # check for header bytes
             (h1,h2,id0) = struct.unpack('BBB',self.buffer[k-1:k+2])
+            # last index in the buffer that remains in the buffer after parsing
+            finalInd = 0
             if h1==ESP_HEADER1 and h2==ESP_HEADER2:
                 # parse
                 print(h1,h2,id0)

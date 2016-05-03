@@ -91,7 +91,7 @@ SERIAL_RATE_HZ = 2.0
 SERIAL_READ_RATE_HZ = 5.0
 SERIAL_PERIOD = 1.0/SERIAL_RATE_HZ
 SERIAL_READ_PERIOD = 1.0/SERIAL_READ_RATE_HZ
-PORT = '/dev/ttyUSB0'
+PORT = 'COM4'
 
 DEBUG_PORT = '/dev/ttyACM0'
 
@@ -102,10 +102,6 @@ try:
     serDebug = serial.Serial(DEBUG_PORT,9600,timeout=0.1)
 except serial.serialutil.SerialException:
     serDebug = None
-
-ser.open()
-if serDebug is not None:
-    serDebug.open()
 
 counter = 0
 tnext = time.time() + SERIAL_PERIOD
