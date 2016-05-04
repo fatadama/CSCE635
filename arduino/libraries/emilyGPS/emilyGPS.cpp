@@ -249,8 +249,9 @@ bool acceptGps(gpsData*g,gpsData*glast){
     return false;
   if(g->t-glast->t > 1000.0)
     return false;
-  if ( (fabs(g->x-glast->x) > 100.0) || (fabs(g->y-glast->y) > 100.0) )
+  if ( (fabs(g->x-glast->x) > 40.0) || (fabs(g->y-glast->y) > 40.0) )
     return false;
+  /*
   if (fabs(g->v-glast->v) > 10.0)
     return false;
   if (fabs(g->hdg-glast->hdg) > 3.14159)
@@ -259,5 +260,6 @@ bool acceptGps(gpsData*g,gpsData*glast){
     return false;
   if (fabs(g->v) > 100.0)
     return false;
+  */
   return true;
 }
