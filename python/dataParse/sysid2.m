@@ -96,7 +96,7 @@ ylabel('u_r');
 grid on;
 
 fprintf('Rudder fit: dot(hdg) = %g*u_r + %g\n',xUr);
-fprintf('Throttle fit: dot(V) = %g*u_r + %g\n',xUt);
+fprintf('Throttle fit: dot(V) = %g*u_t + %g\n',xUt);
 
 %% Model fit
 

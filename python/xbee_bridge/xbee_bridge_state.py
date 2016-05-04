@@ -4,7 +4,7 @@ import numpy as np
 import hardware_interface
 
 ## Conversion factor for (degrees->radians->arc length at mean Earth equatorial radius)
-GPS_D2R_RE = 0.0111318845
+GPS_D2R_RE = 111318.845
 ## Smoothing factor to use on measured GPS values
 SMOOTH_ALPHA = 0.75
 
@@ -53,6 +53,9 @@ class gps_state():
             self.lat = (1.0e-7*float(lat_int))
             self.v = vel
             self.hdg = h
+            self.lon_home = self.lon
+            self.lat_home = self.lat
+            self.ready = True
         self.time = t
         # update the X Y values
         self.latLon2XY()
@@ -66,6 +69,11 @@ class gps_state():
         self.x = (self.lat-self.lat_home)*GPS_D2R_RE
         self.y = (self.lon-self.lon_home)*GPS_D2R_RE
         return
+    ## Compute lat and lon computed from the current x and y state
+    def XY2latLon(self):
+        self.lat = self.x/GPS_D2R_RE+self.lat_home
+        self.lon = self.y/GPS_D2R_RE+self.lon_home
+
 
 class xbee_bridge_state():
     def __init__(self):

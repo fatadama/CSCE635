@@ -10,11 +10,12 @@ sys.path.append('../../../estimation')
 import serial
 # time for running at fixed rates
 import time
+# struct for handling bytes
+import struct
 # hardware interface class
 import hardware_interface
 # emily serial protocol
 import esp_python as esp
-
 # import the bridge class definition
 from xbee_bridge_state import xbee_bridge_state
 
@@ -25,7 +26,7 @@ class bridgeProcess():
         self.time_1Hz = 0.0
         self.time_10Hz = 0.0
         self.time_50Hz = 0.0
-        ## hardware_interface class object
+        ## hardware_interface class object with default SIL arguments
         self.xbee = hardware_interface.hardware_interface(port=None,SIL=True,groundstation=True)
         self.xbee.start()
         ## parser object for the serial protocol
@@ -67,11 +68,13 @@ class bridgeProcess():
             msg_id = struct.unpack('B',msgs[k][2])[0]
             msg = msgs[k]
             if msg_id == esp.message_gps_pos():
-                (len2,lon,lat,t,v,hdg) = esp.unpack_gps_pos(msg)
+                (len2,lon,lat,t,v,hdg,status) = esp.unpack_gps_pos(msg)
                 # set new_data to true
                 self.new_data = True
-                # do stuff
-                print("GPS_POS: %d,%d,%f,%f,%f" % (lon,lat,t,v,hdg))
+                # TODO filter state
+                # write to state
+                self.state.gpsState.update(lon,lat,t,v,hdg)
+                print("GPS_POS: %d,%d,%f,%f,%f,%d" % (lon,lat,t,v,hdg,status))
             if msg_id == esp.message_control():
                 (len2,rudd,thro) = esp.unpack_control(msg)
                 #do stuff
@@ -80,11 +83,11 @@ class bridgeProcess():
                 (len2,source_id,dest_id,syst) = esp.unpack_heartbeat(msg)
                 # do stuff
                 print("HEARTBEAT: %i,%i,%f" % (source_id,dest_id,syst))
-        #   update filter state
         # Write buffer to XBee
-        self.xbee.write(self.txBuffer)
-        # clear the TX buffer
-        self.txBuffer = ''
+        if len(self.txBuffer) > 0:
+            self.xbee.write(self.txBuffer)
+            # clear the TX buffer
+            self.txBuffer = ''
         # Read IPC
         #   Update control_mode
         #   If control_mode == pfields
