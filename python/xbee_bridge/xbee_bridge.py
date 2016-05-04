@@ -18,6 +18,8 @@ import hardware_interface
 import esp_python as esp
 # import the bridge class definition
 from xbee_bridge_state import xbee_bridge_state
+# import the joystick class
+import joystick
 
 class bridgeProcess():
     def __init__(self):
@@ -26,6 +28,8 @@ class bridgeProcess():
         self.time_1Hz = 0.0
         self.time_10Hz = 0.0
         self.time_50Hz = 0.0
+        ## joystick interface class
+        self.joy = joystick.joystick()
         ## hardware_interface class object with default SIL arguments
         self.xbee = hardware_interface.hardware_interface(port=None,SIL=True,groundstation=True)
         self.xbee.start()
@@ -52,9 +56,12 @@ class bridgeProcess():
         self.txBuffer+=esp.pack_heartbeat(esp.ESP_ID_GROUNDSTATION,esp.ESP_ID_BOAT,tNow)
         return
     def loop_10Hz(self,tNow):
+        # TODO control mode logic and definitions
         # if control_mode == teleop, pass through joystick
         # if control_mode == pfields, compute control
+        self.joy.read()
         # put rudder, throttle in Xbee TX buffer
+        self.txBuffer+=esp.pack_control(self.joy.rudderCmd,self.joy.throttleCmd)
         return
     def loop_50Hz(self,tNow):
         # Read XBee
@@ -67,6 +74,7 @@ class bridgeProcess():
             # message id
             msg_id = struct.unpack('B',msgs[k][2])[0]
             msg = msgs[k]
+            '''
             if msg_id == esp.message_gps_pos():
                 (len2,lon,lat,t,v,hdg,status) = esp.unpack_gps_pos(msg)
                 # set new_data to true
@@ -79,10 +87,11 @@ class bridgeProcess():
                 (len2,rudd,thro) = esp.unpack_control(msg)
                 #do stuff
                 print("CONTROL: %f,%f,t=%f" % (rudd,thro,tNow))
+            '''
             if msg_id == esp.message_heartbeat():
                 (len2,source_id,dest_id,syst) = esp.unpack_heartbeat(msg)
                 # do stuff
-                print("HEARTBEAT: %i,%i,%f" % (source_id,dest_id,syst))
+                print("HEARTBEAT: %i,%i,%f,t=%f" % (source_id,dest_id,syst,tNow))
         # Write buffer to XBee
         if len(self.txBuffer) > 0:
             self.xbee.write(self.txBuffer)

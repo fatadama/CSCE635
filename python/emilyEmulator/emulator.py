@@ -112,11 +112,13 @@ class emilyEmulator:
             # message id
             msg_id = struct.unpack('B',msgs[k][2])[0]
             msg = msgs[k]
+            '''
             if msg_id == esp.message_control():
                 (len2,rudd,thro) = esp.unpack_control(msg)
-                print("RECV CONTROL: %f,%f,t=%f" % (rudd,thro,tNow))
+                print("RECV CONTROL: %f,%f" % (rudd,thro))
                 self.rudd = rudd
                 self.thro = thro
+            '''
             if msg_id == esp.message_heartbeat():
                 (len2,source_id,dest_id,syst) = esp.unpack_heartbeat(msg)
                 print("RECV HEARTBEAT: %i,%i,%f" % (source_id,dest_id,syst))
@@ -187,9 +189,6 @@ class process:
         self.timer_1Hz = self.timer_1Hz + 1.0
         return
     def loop_5Hz(self,tNow):
-        # read from buffer
-        ch = self.xbee.read()
-        self.emily.readCh(ch)
         # get GPS and send to buffer
         self.emily.sampleGps()
         buf = bytes()
@@ -203,6 +202,9 @@ class process:
         self.timer_5Hz = self.timer_5Hz + 0.2
         return
     def loop_50Hz(self,tNow):
+        # read from buffer
+        ch = self.xbee.read()
+        self.emily.readCh(ch)
         # simulate the dynamics
         self.emily.propagate(0.02)
         # reset the timer
