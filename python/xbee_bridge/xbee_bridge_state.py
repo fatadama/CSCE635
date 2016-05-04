@@ -1,10 +1,12 @@
 # numpy for arrays and potentially for operations later
 import numpy as np
+# hardware interface class
+import hardware_interface
 
 ## Conversion factor for (degrees->radians->arc length at mean Earth equatorial radius)
 GPS_D2R_RE = 0.0111318845
 ## Smoothing factor to use on measured GPS values
-SMOOTH_ALPHA = 0.1
+SMOOTH_ALPHA = 0.75
 
 ## Lowpass filter an input to return a new, smoothed state
 #
@@ -22,7 +24,7 @@ class gps_state():
         self.lon = 0.0
         # latitude (degrees) positive == north
         self.lat = 0.0
-        # GPS time in seconds (from receiver)
+        ## GPS time in seconds (from receiver)
         self.time = 0.0
         self.x = 0.0
         self.y = 0.0
@@ -30,7 +32,7 @@ class gps_state():
         self.hdg = 0.0
         self.lon_home = 0.0
         self.lat_home = 0.0
-        # initialization flag: set to False until we receive at least one GPS update
+        ## initialization flag: set to False until we receive at least one GPS update
         self.ready = False
     ## Read in raw lat/lon/time from the XBee and update the inernal state
     #
@@ -69,5 +71,6 @@ class xbee_bridge_state():
     def __init__(self):
         ## gpsState object for holding the state of EMILY
         self.gpsState = gps_state();
-        ## control mode
+        ## control mode: 0 == teleoperation, 1 == pfields
+        self.control_mode = 0
         return

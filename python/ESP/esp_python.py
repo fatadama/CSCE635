@@ -70,7 +70,7 @@ class espParser():
             finalInd = 0
             if h1==ESP_HEADER1 and h2==ESP_HEADER2:
                 # parse
-                print(h1,h2,id0)
+                #print(h1,h2,id0)
                 # check that there are enough bites remaining
                 valid = False
                 if id0 == MSG_GPS:
