@@ -129,7 +129,7 @@ stateLast = np.array([gps[0,0],gpsXY[0,0],gpsXY[0,1],gps[0,4],gps[0,5]])
 # count bad GPS
 rejectCount = 0
 # log the state
-LEN = 2000
+LEN = 3000
 xLog = np.zeros((LEN,6))
 xLog[0,:] = EKF.xhat.copy()
 Plog = np.zeros((LEN,6))
@@ -138,34 +138,52 @@ Pfull = np.zeros((LEN,6,6))
 Pfull[0,:,:] = EKF.Pk.copy()
 Ylog = np.zeros((LEN,5))
 Ylog[0,:] = stateLast.copy()
+uLog = np.zeros((LEN,2))
+uLog[0,:] = control[0,1:3]
 # count how many good data points we've used
 logCounter = 0;
 # count how many total log entries we've looked at
 k = 0
 gpsOutliers = []
 while(logCounter < LEN-1):
-    k = k+1
-    # for each measurement: determine if reject or not
-    state = np.array([gps[k,0],gpsXY[k,0],gpsXY[k,1],gps[k,4],gps[k,5]])
-    if acceptGps(state,stateLast,True):
-        logCounter = logCounter+1
-        # process measurement
-        dt = state[0]-stateLast[0]
-        # propagate
-        EKF.propagateOde(dt)
-        # update
-        EKF.update(state[0],state[1:3],measurement,measurementGradient,Rkin)
-        # log
-        xLog[logCounter,:] = EKF.xhat.copy()
-        Plog[logCounter,:] = np.diag(EKF.Pk.copy())
-        Pfull[logCounter,:,:] = EKF.Pk.copy()
-        Ylog[logCounter,:] = state.copy()
-        #print('%g,%g,%g,%g,%g|%g,%g' % (state[0],EKF.xhat[0],EKF.xhat[1],EKF.u[0],EKF.u[1],state[1],state[2]))
-        stateLast = state
-    else:
-        rejectCount=rejectCount+1
-        gpsOutliers.append(k)
-        print("%d bad gps" % rejectCount)
+    try:
+        k = k+1
+        # for each measurement: determine if reject or not
+        state = np.array([gps[k,0],gpsXY[k,0],gpsXY[k,1],gps[k,4],gps[k,5]])
+        if acceptGps(state,stateLast,False):
+            logCounter = logCounter+1
+            # find the control index before the current index
+            ci = np.nonzero(control[:,0] <= state[0])[0][-1]
+            uk = control[ci,1:3]
+            # log control
+            uLog[logCounter-1,:] = control[ci,1:3]
+            # process measurement
+            dt = state[0]-stateLast[0]
+            # propagate
+            EKF.propagateOde(dt)
+            # update
+            EKF.update(state[0],state[1:3],measurement,measurementGradient,Rkin)
+            # log
+            xLog[logCounter,:] = EKF.xhat.copy()
+            Plog[logCounter,:] = np.diag(EKF.Pk.copy())
+            Pfull[logCounter,:,:] = EKF.Pk.copy()
+            Ylog[logCounter,:] = state.copy()
+            #print('%g,%g,%g,%g,%g|%g,%g' % (state[0],EKF.xhat[0],EKF.xhat[1],EKF.u[0],EKF.u[1],state[1],state[2]))
+            stateLast = state
+        else:
+            rejectCount=rejectCount+1
+            gpsOutliers.append(k)
+            print("%d bad gps" % rejectCount)
+    except IndexError:
+        # out of range
+        LEN = logCounter-1
+        xLog = xLog[:LEN,:]
+        Plog = Plog[:LEN,:]
+        Pfull = Pfull[:LEN,:,:]
+        Ylog = Ylog[:LEN,:]
+        uLog = uLog[:LEN,:]
+        print("Breaking at index %d" % (k))
+        break
 print("%d bad gps" % rejectCount)
 gpsInliers = np.setdiff1d(np.arange(0,len(gps)),gpsOutliers)
 # compute the velocity magnitude and heading, assuming velocity along the direction of heading
@@ -182,6 +200,25 @@ for k in range(LEN):
 # plot
 fig = plt.figure()
 ax = []
+
+# write data to file
+fout = open(path+'/jerkOut.csv','w+')
+fout.write('time(sec),X(m),Y(m),VX(m/s),VY(m/s),AX(m/s^2),AY(m/s^2),Xm(m),Ym(m),Vm(m),Hdgm(rad),u_rudder,u_throttle')
+for k in range(6):
+    for j in range(6):
+        fout.write(',P_%d%d' % (k+1,j+1))
+fout.write('\n')
+# write data
+for k in range(LEN):
+    fout.write('%f,%f,%f,%f,%f,%f,%f' % (Ylog[k,0],xLog[k,0],xLog[k,1],xLog[k,2],xLog[k,3],xLog[k,4],xLog[k,5]))
+    fout.write(',%f,%f,%f,%f' % (Ylog[k,1],Ylog[k,2],Ylog[k,3],Ylog[k,4]))
+    fout.write(',%f,%f' % (uLog[k,0],uLog[k,1]))
+    for kk in range(6):
+        for j in range(6):
+            fout.write(',%f' % (Pfull[k,kk,j]))
+    fout.write('\n')
+fout.close()
+print("Wrote %d lines to file" % (LEN))
 
 lbls = ['x(m)','y(m)','vx(m/s)','vy(m/s)','ax(m/s^2)','ay(m/s^2)','ex(m)','ey(m)']
 for k in range(8):
