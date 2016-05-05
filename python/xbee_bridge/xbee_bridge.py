@@ -19,6 +19,7 @@ from datetime import datetime
 import os
 # import ConfigParser for loading ini file NOTE in Python 3 the name of this module changes
 from ConfigParser import ConfigParser
+
 # hardware interface class
 import hardware_interface
 # emily serial protocol
@@ -178,7 +179,6 @@ class bridgeProcess():
     # @param[in] thro the throttle command on [0,1]
     def log_controlOut(self,tNow,rudd,thro):
         self.controlOutLog.write('%.12g,%g,%g\n' % (tNow,rudd,thro))
-
 
 def main():
     # load settings
