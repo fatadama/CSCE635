@@ -28,6 +28,8 @@ import esp_python as esp
 from xbee_bridge_state import xbee_bridge_state
 # import the joystick class
 import joystick
+# import the control class
+import control
 
 ## Class object for the XBee bridge
 #
@@ -62,6 +64,8 @@ class bridgeProcess():
         foldername = logDir+('%04d%02d%02d_%02d%02d%02d/' % (dt.year,dt.month,dt.day,dt.hour,dt.minute,dt.second))
         if not os.path.exists(os.path.dirname(foldername)):
             os.makedirs(foldername)
+        ## control object for computing control TODO integrate PID gains in the settings file
+        self.control = control.control(logDir=foldername)
         ## parser object for the serial protocol. Pass the log folder to create message logs
         self.espParser = esp.espParser(logdir=foldername)
         ## GPS log file
