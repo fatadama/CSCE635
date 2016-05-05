@@ -12,8 +12,8 @@ class hardware_interface:
         self.SIL = SIL
         if self.SIL==False:
             self.ser = serial.Serial()
-            ser.baudrate = rate
-            ser.port = port
+            self.ser.baudrate = rate
+            self.ser.port = port
         else:
             self.sock_send = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
             self.sock_recv = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )

@@ -15,8 +15,10 @@ import time
 import struct
 # datetime to get the name of the log folder
 from datetime import datetime
-# import os for making directory
+# import os for creating the log directory
 import os
+# import ConfigParser for loading ini file NOTE in Python 3 the name of this module changes
+from ConfigParser import ConfigParser
 # hardware interface class
 import hardware_interface
 # emily serial protocol
@@ -29,8 +31,10 @@ import joystick
 ## Class object for the XBee bridge
 #
 # @param[in] logDir: the relative path to create log files. Use empty string to use the current directory.
+# @param[in] SIL: boolean, set to True to use the emily emulator, False to use XBee on specified port
+# @param[in] port: string, the name of the serial port. Windows ports look like 'COMXX'. Not used if SIL is True
 class bridgeProcess():
-    def __init__(self,logDir = ''):
+    def __init__(self,logDir = '',SIL=True,port='COM4'):
         ## state object from xbee_bridge_state
         self.state = xbee_bridge_state()
         ## start time - used to reduce all times to something more convenient for floats
@@ -44,7 +48,7 @@ class bridgeProcess():
         ## joystick interface class
         self.joy = joystick.joystick()
         ## hardware_interface class object with default SIL arguments
-        self.xbee = hardware_interface.hardware_interface(port=None,SIL=True,groundstation=True)
+        self.xbee = hardware_interface.hardware_interface(port=port,SIL=SIL,groundstation=True)
         self.xbee.start()
         ## (boolean) set to True when we get a new GPS message
         self.new_data = False
@@ -177,7 +181,24 @@ class bridgeProcess():
 
 
 def main():
-    process = bridgeProcess()
+    # load settings
+    settings = ConfigParser()
+    settings.read('settings.ini')
+    print('Loaded settings file settings.ini')
+    # default values of settings
+    SIL = False
+    port = 'COM4'
+    for item in settings.items('xbee_bridge'):
+        if item[0] == 'sil':
+            if item[1]=='False':
+                SIL = False
+            if item[1]=='True':
+                SIL = True
+            print('Set SIL to %d' % (SIL))
+        if item[0] == 'port':
+            port = item[1]
+            print('Set port to %s' % (port))
+    process = bridgeProcess(SIL=SIL,port=port)
     try:
         while True: # main loop
             process.main_loop()
