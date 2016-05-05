@@ -46,8 +46,6 @@ class bridgeProcess():
         ## hardware_interface class object with default SIL arguments
         self.xbee = hardware_interface.hardware_interface(port=None,SIL=True,groundstation=True)
         self.xbee.start()
-        ## parser object for the serial protocol
-        self.espParser = esp.espParser()
         ## (boolean) set to True when we get a new GPS message
         self.new_data = False
         ## buffer of bytes to write to XBee; clear whenever written
@@ -56,17 +54,19 @@ class bridgeProcess():
         self.control_mode = 0
         # make log folder based on date/time
         dt = datetime.now()
-        foldername = logDir+('%04d%02d%02d_%02d%02d%02d' % (dt.year,dt.month,dt.day,dt.hour,dt.minute,dt.second))
+        foldername = logDir+('%04d%02d%02d_%02d%02d%02d/' % (dt.year,dt.month,dt.day,dt.hour,dt.minute,dt.second))
         if not os.path.exists(os.path.dirname(foldername)):
             os.makedirs(foldername)
+        ## parser object for the serial protocol. Pass the log folder to create message logs
+        self.espParser = esp.espParser(logdir=foldername)
         ## GPS log file
-        self.gpsLog = open(foldername+'/gpslog.csv','w')
+        self.gpsLog = open(foldername+'gpslog.csv','w')
         self.gpsLog.write('systime,t,lon,lat,v,hdg,status\n')
         ## Control (received) log file
-        self.controlLog = open(foldername+'/controlLog.csv','w')
+        self.controlLog = open(foldername+'controlLog.csv','w')
         self.controlLog.write('systime,rudd,thro\n')
         ## Control (transmitted) log file
-        self.controlOutLog = open(foldername+'/controlOutLog.csv','w')
+        self.controlOutLog = open(foldername+'controlOutLog.csv','w')
         self.controlOutLog.write('systime,rudd,thro\n')
     def __del__(self):
         ## close the log files
@@ -90,11 +90,11 @@ class bridgeProcess():
         self.txBuffer+=esp.pack_heartbeat(esp.ESP_ID_GROUNDSTATION,esp.ESP_ID_BOAT,tNow)
         return
     def loop_10Hz(self,tNow):
-        if control_mode == 0:# if control_mode == teleop, pass through joystick
+        if self.control_mode == 0:# if control_mode == teleop, pass through joystick
             self.joy.read()
             # put rudder, throttle in Xbee TX buffer
             self.txBuffer+=esp.pack_control(self.joy.rudderCmd,self.joy.throttleCmd)
-        elif control_mode == 1:# if control_mode == pfields, compute control
+        elif self.control_mode == 1:# if control_mode == pfields, compute control
             # TODO add logic for converting an input vector to range/heading, and add control function for doing control
             self.txBuffer+=esp.pack_control(0.0,0.0)
         return
@@ -138,7 +138,7 @@ class bridgeProcess():
             # write to state
             self.state.gpsState.update(lon,lat,t,v,hdg)
             # log to file
-            self.log_gps(tNow,lon,lat,t,v,hdg)
+            self.log_gps(tNow,lon,lat,t,v,hdg,status)
             print("GPS_POS: %d,%d,%f,%f,%f,%d" % (lon,lat,t,v,hdg,status))
         if msg_id == esp.message_control():
             (len2,rudd,thro) = esp.unpack_control(msg)
@@ -157,7 +157,8 @@ class bridgeProcess():
     # @param[in] t the time from parsed message
     # @param[in] v the speed from parsed message (m/s)
     # @param[in] hdg the heading from parsed message (radians)
-    def log_gps(self,tNow,lon,lat,t,v,hdg):
+    # @param[in] status the status byte from message
+    def log_gps(self,tNow,lon,lat,t,v,hdg,status):
         self.gpsLog.write('%.12g,%g,%i,%i,%g,%g,%d\n' % (tNow,t,lon,lat,v,hdg,status))
     ## Function to log received control values
     #

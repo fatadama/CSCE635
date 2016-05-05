@@ -1,5 +1,6 @@
 import array
 import struct
+import time
 
 # header bytes
 ESP_HEADER1 = 127
@@ -44,11 +45,18 @@ def message_heartbeat():
     return MSG_HEARTBEAT
 
 ## Parser class for handling messages
+#
+# @param[in] logdir: relative path to log raw message diagnostics. Format: '../path/to/folder/' with trailing backslash
 class espParser():
     ## Initialization function. Sets default max buffer length to 1024.
-    def __init__(self):
+    def __init__(self,logdir=None):
         self.buffer = ''
         self.max_len = 1024# maxlength of buffer in bytes
+        if logdir is not None:
+            self.log = open(logdir+'serialLog.csv','wt')
+            self.log.write('systime(sec),msg_id,valid_msg,bytes->\n')
+        else:
+            self.log = None
         return
     ## Accept bytes from the serial port and search through for ESP messages.
     #
@@ -57,6 +65,8 @@ class espParser():
     # @param[out] numMsgs the number of messages read from the buffer
     # @param[out] msgs a list of messages in the buffer
     def parseBytes(self,chars):
+        # get current time
+        tNow = time.time()
         self.buffer+=chars
         # index of buffer chars to remove
         idrm = 0
@@ -75,28 +85,39 @@ class espParser():
                 valid = False
                 if id0 == MSG_GPS:
                     if len(self.buffer[k-1:]) >= MSG_GPS_LEN:
-                        finalInd = (k-1)+MSG_GPS_LEN+1
+                        finalInd = (k-1)+MSG_GPS_LEN
                         valid = True
                 if id0 == MSG_CONTROL:
                     if len(self.buffer[k-1:]) >= MSG_CONTROL_LEN:
-                        finalInd = (k-1)+MSG_CONTROL_LEN+1
+                        finalInd = (k-1)+MSG_CONTROL_LEN
                         valid = True
                 if id0 == MSG_COMMAND:
                     if len(self.buffer[k-1:]) >= MSG_COMMAND_LEN:
-                        finalInd = (k-1)+MSG_COMMAND_LEN+1
+                        finalInd = (k-1)+MSG_COMMAND_LEN
                         valid = True
                 if id0 == MSG_SET_PID:
                     if len(self.buffer[k-1:]) >= MSG_SET_PID_LEN:
-                        finalInd = (k-1)+MSG_SET_PID_LEN+1
+                        finalInd = (k-1)+MSG_SET_PID_LEN
                         valid = True
                 if id0 == MSG_GPS_POS:
                     if len(self.buffer[k-1:]) >= MSG_GPS_POS_LEN:
-                        finalInd = (k-1)+MSG_GPS_POS_LEN+1
+                        finalInd = (k-1)+MSG_GPS_POS_LEN
                         valid = True
                 if id0 == MSG_HEARTBEAT:
                     if len(self.buffer[k-1:]) >= MSG_HEARTBEAT_LEN:
-                        finalInd = (k-1)+MSG_HEARTBEAT_LEN+1
+                        finalInd = (k-1)+MSG_HEARTBEAT_LEN
                         valid = True
+                if valid:
+                    if checksum_valid(self.buffer[k-1:finalInd],finalInd-k+1):
+                        valid=True
+                    else:
+                        valid=False
+                    # log that we got the first two bytes of a message
+                    if self.log is not None:
+                        self.log.write('%.12g,%d,%d' % (tNow,id0,valid))
+                        for g in range(k-1,finalInd):
+                            self.log.write(',%u' % (struct.unpack('B',self.buffer[g])) )
+                        self.log.write('\n')
                 if valid:
                     numMsgs=numMsgs+1
                     msgs.append(self.buffer[k-1:finalInd])
