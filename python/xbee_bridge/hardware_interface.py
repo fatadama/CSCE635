@@ -3,6 +3,9 @@
 import serial
 import socket
 
+UDP_SERVER_RX = 49152
+UDP_SERVER_TX = 49153
+
 class hardware_interface:
     def __init__(self,port,SIL=False,rate='9600',groundstation=True):
         self.groundstation = groundstation
@@ -30,19 +33,19 @@ class hardware_interface:
             self.ser.open()
         else:
             if self.groundstation:
-                self.sock_send.connect(('127.0.0.1',5006))
-                self.sock_recv.bind(('127.0.0.1',5005))
+                self.sock_send.connect(('127.0.0.1',UDP_SERVER_TX))
+                self.sock_recv.bind(('127.0.0.1',UDP_SERVER_RX))
             else:
-                self.sock_send.connect(('127.0.0.1',5005))
-                self.sock_recv.bind(('127.0.0.1',5006))
+                self.sock_send.connect(('127.0.0.1',UDP_SERVER_RX))
+                self.sock_recv.bind(('127.0.0.1',UDP_SERVER_TX))
     def write(self,buff):
         if self.SIL==False:
             self.ser.write(buff)
         else:
             if self.groundstation:
-                self.sock_send.sendto(buff,('127.0.0.1', 5006))
+                self.sock_send.sendto(buff,('127.0.0.1', UDP_SERVER_TX))
             else:
-                self.sock_send.sendto(buff,('127.0.0.1', 5005))
+                self.sock_send.sendto(buff,('127.0.0.1', UDP_SERVER_RX))
     ## read from serial port
     def read(self):
         if self.SIL==False:

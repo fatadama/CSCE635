@@ -29,7 +29,7 @@ while True:
                 print("GPS_POS: %d,%d,%f,%f,%f" % (lon,lat,t,v,hdg))
             if msg_id == esp.message_control():
                 (len2,rudd,thro) = esp.unpack_control(msg)
-                print("CONTROL: %f,%f,t=%f" % (rudd,thro,tNow))
+                print("CONTROL: %f,%f" % (rudd,thro))
             if msg_id == esp.message_command():
                 (len2,hdg,spd) = esp.unpack_command(msg)
                 print("COMMAND: %f,%f" % (hdg,spd))

@@ -112,13 +112,11 @@ class emilyEmulator:
             # message id
             msg_id = struct.unpack('B',msgs[k][2])[0]
             msg = msgs[k]
-            '''
             if msg_id == esp.message_control():
                 (len2,rudd,thro) = esp.unpack_control(msg)
-                print("RECV CONTROL: %f,%f" % (rudd,thro))
+                #print("RECV CONTROL: %f,%f" % (rudd,thro))
                 self.rudd = rudd
                 self.thro = thro
-            '''
             if msg_id == esp.message_heartbeat():
                 (len2,source_id,dest_id,syst) = esp.unpack_heartbeat(msg)
                 print("RECV HEARTBEAT: %i,%i,%f" % (source_id,dest_id,syst))
@@ -216,6 +214,7 @@ class process:
 
 def main():
     proc = process()
+    print("Emily emulator started")
     try:
         while True:
             proc.main_loop()
