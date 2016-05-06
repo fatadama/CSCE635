@@ -282,7 +282,7 @@ class synthetic_waypoint():
     def update(self,tNow,x,y,hdg):
         self.range = math.sqrt( math.pow(self.x-x,2.0)+math.pow(self.y-y,2.0) )
         self.bearing = math.atan2(self.y-y,self.x-x)-hdg
-        print("waypoint: %g, %g" % (self.range,self.bearing))
+        #print("waypoint: %g, %g" % (self.range,self.bearing))
         if self.log is not None:
             self.log.write('%.12g,%g,%g,%g,%g\n' % (tNow,self.x,self.y,self.range,self.bearing))
 

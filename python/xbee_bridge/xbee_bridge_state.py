@@ -16,7 +16,7 @@ import ekf
 ## Conversion factor for (degrees->radians->arc length at mean Earth equatorial radius)
 GPS_D2R_RE = 111318.845
 ## Smoothing factor to use on measured GPS values
-SMOOTH_ALPHA = 0.25
+SMOOTH_ALPHA = 0.1
 
 ## Lowpass filter an input to return a new, smoothed state
 #
@@ -56,14 +56,25 @@ class gps_state():
     # @param[in] h heading in radians, relative to north. (positive == east)
     def update(self,lon_int,lat_int,t,vel,h):
         #print('%10li %10li %11.6g %11.6g' % (lat_int,lon_int,self.x,self.y))
+        dt = t - self.time
         self.time = t
         if self.ready:
+            xlast = self.x
+            ylast = self.y
             self.lon = lowpass(self.lon, 1.0e-7*float(lon_int), SMOOTH_ALPHA)
             self.lat = lowpass(self.lat, 1.0e-7*float(lat_int), SMOOTH_ALPHA)
-            self.v = lowpass(self.v,vel,SMOOTH_ALPHA)
-            self.hdg = lowpass(self.hdg,h,SMOOTH_ALPHA)
+            #self.v = lowpass(self.v,vel,SMOOTH_ALPHA)
+            #self.hdg = lowpass(self.hdg,h,SMOOTH_ALPHA)
             # update the X Y values
             self.latLon2XY()
+            # approximate the speed
+            h = math.atan2(self.y-ylast,self.x-xlast)
+            self.hdg = lowpass(self.hdg,h,SMOOTH_ALPHA)
+            if dt > 0:
+                vel = math.sqrt( math.pow(self.x-xlast,2.0)+math.pow(self.y-ylast,2.0) )/dt
+            else:
+                vel = 0.0
+            self.v = lowpass(self.v,vel,SMOOTH_ALPHA)
         else:
             self.lon = (1.0e-7*float(lon_int))
             self.lat = (1.0e-7*float(lat_int))
@@ -167,6 +178,7 @@ class xbee_bridge_state():
                 print("Reject for back in time: dt = %g, dtReal=%g" % (dt,dtReal))
                 pass
         # if the filter state matches the reading well enough, use it
+        '''
         if math.sqrt( np.sum(np.power(self.EKF.xhat[0:2]-np.array([self.gpsState.x,self.gpsState.y]),2.0)) ) < 10.0:
             # copy the filter state to local
             self.filterState[0:2] = self.EKF.xhat[0:2].copy()
@@ -181,8 +193,13 @@ class xbee_bridge_state():
             self.filterState[1] = self.gpsState.y
             self.filterState[2] = self.gpsState.v
             self.filterState[3] = self.gpsState.hdg
+        '''
+        self.filterState[0] = self.gpsState.x
+        self.filterState[1] = self.gpsState.y
+        self.filterState[2] = self.gpsState.v
+        self.filterState[3] = self.gpsState.hdg
         # reset the filter if things look bad
-        # are the covariance diagonals zero?
+        # are the covariance diagonals zero or nan?
         if (self.EKF.Pk[0,0]==0.0) or (self.EKF.Pk[1,1]==0.0) or (self.EKF.Pk[2,2]==0.0) or (self.EKF.Pk[3,3]==0.0) or (self.EKF.Pk[4,4]==0.0) or (self.EKF.Pk[5,5]==0.0) or (np.any(np.isnan(np.diag(self.EKF.Pk)))):
             # initialize the filter
             xk0 = np.array([self.gpsState.x,self.gpsState.y,0.0,0.0,0.0,0.0]) # initial state
