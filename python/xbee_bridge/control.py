@@ -1,6 +1,8 @@
 ## @file
 # Control object for controlling EMILY
 
+## TODO add logic to reset PID object when the control mode switch from teleoperation to automatic control
+
 # import the definition of the gps class object
 from xbee_bridge_state import gps_state
 import math
@@ -20,15 +22,21 @@ def headingError(h1,h2):
         h1 = h1 + 2.0*math.pi
     return h1-h2
 
+## Control class called from main loop
+#
+# @param[in] logDir relative file path to where logs are. If None, does not write logs. Else, PID object writes a diagonostic log with object information.
+# @param[in] Kp proportional gains on heading during cruise
+# @param[in] Ki integral gain on heading during cruise
+# @param[in] Kd derivative gain on heading during cruise
 class control():
-    def __init__(self,logdir=None,Kp=0.0,Kd=0.0,Ki=0.0):
+    def __init__(self,logDir=None,Kp=0.0,Kd=0.0,Ki=0.0):
         # allocate memory
         self.x = 0.0
         self.y = 0.0
         self.v = 0.0
         self.psi = 0.0
         self.rangeRef = 0.0
-        ## Target heading (rads)
+        ## Target heading (rads) (inertial frame)
         self.headingRef = 0.0
         ## target rudder setting
         self.rudder = 0.0
@@ -36,70 +44,92 @@ class control():
         self.throttle = 0.0
         ## PID object for heading commands
         self.headingPid = PIDclass(Kp,Ki,Kd,logDir=logDir,name='hdg',umin=-1.0,umax=1.0)
+        ## log object
+        if logDir is not None:
+            self.log = open(logDir+'controlObjectLog.csv','w+')
+            self.log.write('time(sec),x(m),y(m),v(m/s),hdg(rads),rangeRef(m),headingRef(rad),rudder,throttle\n')
+        else:
+            self.log = None
     ## Convert a commanded vector (2-length array) to range and heading and store
-    def vectorRef(self,vector):
-        self.rangeRef = math.sqrt( vector[0]*vector[0]+vector[1]*vector[1] )
-        self.headingRef = math.atan2(vector[1],vector[0])
-        return
-    ## Convert an input gpsState to local x, y, v, and hdg
     #
-    # @param[in] gpsState: a gps_state object that contains the current position in local coordinates
-    # @param[in] v: the current velocity magnitude (m/s)
-    # @oaram[in] psi: the current heading, in radians east of north
-    def updateState(self,gpsState,v,psi):
-        self.x = gpsState.x
-        self.y = gpsState.y
-        self.v = v
-        self.psi = hdg
+    # @param[in] mag the magnitude of the desired direction
+    # @param[in] direc the direction in radians, relative to EMILY! Positive is to the right of EMILY (facing toward the front of boat)
+    def vectorRef(self,mag,direc):
+        self.rangeRef = mag
+        self.headingRef = direc+self.psi
+        return
+    ## Convert an input state of x, y, v, and hdg
+    #
+    # @param[in] inState: a numpy array of input: [x(m),y(m),V(m/s),heading(radians)]
+    def updateState(self,inState):
+        self.x = inState[0]
+        self.y = inState[1]
+        self.v = inState[2]
+        self.psi = inState[3]
         return
     ## Update the control value based on the current state
-    def update(self):
-        # evaluate range to target. Do nothing if close
+    # @param[in] tNow the current clock time (seconds)
+    def update(self,tNow):
+        # evaluate range to target. Do nothing if close enough
         if self.rangeRef < rangeThreshold:
             self.rudder = 0.0
             self.throttle = 0.0
+            # log to file
+            self.logSelf(tNow)
             return
         deltaPsi = headingError(self.psi,self.headingRef)
         if deltaPsi > headingThreshold:# we are more than 20 degrees east of the target
             # turn left at a slow speed
-            self.throttle = 0.2
+            self.throttle = 0.3
             self.rudder = -1.0
         if deltaPsi < -headingThreshold: # we are more than 20 degrees west of the target
             # turn right at a slow speed
-            self.throttle = 0.2
+            self.throttle = 0.3
             self.rudder = 1.0
         else:# TODO do PID on heading
-            self.rudder = 0.0
-            self.throttle = 0.0
+            self.rudder = self.headingPid.update(tNow,self.psi,self.headingRef,diffFun=headingError)
+            self.throttle = 0.6
+        # log to file
+        self.logSelf(tNow)
+    ## Write current state to file
+    #
+    # @param[in] tNow the current time
+    def logSelf(self,tNow):
+        #self.log.write('time(sec),x(m),y(m),v(m/s),hdg(rads),rangeRef(m),headingRef(rad),rudder,throttle\n')
+        if self.log is not None:
+            self.log.write('%.12g,%g,%g,%g,%g,%g,%g,%g,%g\n' % (tNow,self.x,self.y,self.v,self.psi,self.rangeRef,self.headingRef,self.rudder,self.throttle))
+    ## Reset the PID object
+    def reset(self):
+        self.headingPid.reset()
 
+## Function used to compute the error between state and reference in the default case
+# subtracts the reference from the state
 def defaultDifference(x,r):
     return x-r
 
 ## PID class from old Crazyflie code. For purely SISO systems.
 class PIDclass:
     def __init__(self,Kp,Ki,Kd,logDir = None,name = 'pid1',umax = 1e9,umin = -1e9):
-        # last value of state, X
+        ## last value of state, X
         self.stateLast = 0.0
-        # last systime time of update - used to tell if we've lost data
-        self.sysTimeLast = time.time()
-        # last timestamp
+        ## last timestamp
         self.timeLast = 0.0
-        # current P, I, D state values
+        ## current P, I, D state values
         self.pidstate = np.array([0.0,0.0,0.0])
-        # PID gain array
+        ## PID gain array
         self.pidarray = np.array([Kp,Ki,Kd])
-        # store control copy locally
+        ## store control copy locally
         self.u = np.array([0.0,0.0,0.0])
-        # flag that says if we've received data before - don't use integral term until this has been set
+        ## flag that says if we've received data before - don't use integral term until this has been set
         # otherwise we get a huge jump in delta-time and integral term explodes
         self.flag_init = False
-        # control limits (use arbitrary large numbers)
+        ## control limits (use arbitrary large numbers if no relevant limits)
         self.u_max = umax
         self.u_min = umin
         # log file
         if logDir is not None:
             #open log file
-            self.fid = open(logDir + ('pid_%s.log' % (name)),'w')
+            self.fid = open(logDir + ('pid_%s.csv' % (name)),'w')
             self.fid.write("time (ms),x,ref,state_p,state_i,state_d,u\n")
             print("Opened PID log file for state %s" % name)
         else:
@@ -110,7 +140,6 @@ class PIDclass:
         self.pidstate[1] = 0.0
         self.pidstate[2] = 0.0
         self.flag_init = False
-        self.sysTimeLast = time.time()
         self.stateLast = 0.0
         self.u[0] = 0.0
         self.u[1] = 0.0
@@ -131,7 +160,7 @@ class PIDclass:
             else:
                 deri = 0.0# divide by zero protection
             #increment integral
-            inte = (t-self.timeLast)*(x-r)
+            inte = (t-self.timeLast)*prop
         else:
             deri = 0.0
             inte = 0.0
@@ -144,8 +173,6 @@ class PIDclass:
         uc = -1.0*np.dot(self.pidarray,self.pidstate)
         # control limits
         uc = max(self.u_min,min(uc,self.u_max))
-        # save current system time
-        self.sysTimeLast = time.time()
         # save timestamp
         self.timeLast = t
         # save last state
@@ -155,6 +182,6 @@ class PIDclass:
         # log control
         if self.fid is not None:
             # write time, x, r, prop, inte, deri, u
-            self.fid.write("%f,%f,%f,%f,%f,%f,%f,%f\n" % (time.time(),t,x,r,self.pidstate[0],self.pidstate[1],self.pidstate[2],uc) )
+            self.fid.write("%f,%f,%f,%f,%f,%f,%f\n" % (t,x,r,self.pidstate[0],self.pidstate[1],self.pidstate[2],uc) )
         # return u
         return uc

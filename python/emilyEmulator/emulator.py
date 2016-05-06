@@ -39,16 +39,18 @@ XBEE_BUFFER_SIZE_MAX = 256
 # u[1] = throttle COMMAND on [0,1]
 def eqom(x,t,u):
     dx = np.zeros(6)
+    # enforce no zero velocity
+    if x[2] < 0.0:
+        x[2] = 0.0
     dx[0]=x[2]*math.cos(x[3])
     dx[1]=x[2]*math.sin(x[3])
     dx[2]=1.030544*x[5]-.271589
-    dx[3]=0.16412*x[4]-.07814
+    dx[3]=0.16412*x[4] # ignore the bias for now
+    #dx[3]=0.16412*x[4]-.07814
     dx[4]=10.0*(u[0]-x[4])
     dx[5]=2.5*(u[1]-x[5])
     # enforce limits:
-    if x[2] > 12.0:
-        dx[2] = 0.0
-    if x[2] <=0.0:
+    if x[2] > 12.0:# max speed 12 m/s
         dx[2] = 0.0
     return dx
 
@@ -68,7 +70,7 @@ class emilyEmulator:
         self.truthState = gps_state()
         ## true velocity (m/s) and heading (rads)
         self.velstate = np.zeros(2)
-        ## true actuator states
+        ## true actuator states: rudder, throttle
         self.actuators = np.zeros(2)
         ## measured/estimated state
         self.gpsState = gps_state()
@@ -114,9 +116,9 @@ class emilyEmulator:
             msg = msgs[k]
             if msg_id == esp.message_control():
                 (len2,rudd,thro) = esp.unpack_control(msg)
-                #print("RECV CONTROL: %f,%f" % (rudd,thro))
                 self.rudd = rudd
                 self.thro = thro
+                #print("RECV CONTROL: %f,%f" % (self.rudd,self.thro))
             if msg_id == esp.message_heartbeat():
                 (len2,source_id,dest_id,syst) = esp.unpack_heartbeat(msg)
                 print("RECV HEARTBEAT: %i,%i,%f" % (source_id,dest_id,syst))
@@ -126,7 +128,9 @@ class emilyEmulator:
         self.gpsState.lon = self.truthState.lon
         self.gpsState.lat = self.truthState.lat
         self.gpsState.time = self.truthState.time
-        self.gpsState.latLon2XY()
+        self.gpsState.x = self.truthState.x
+        self.gpsState.y = self.truthState.y
+        #self.gpsState.latLon2XY()
         # add error to the X-Y state
         self.gpsState.x=self.gpsState.x+np.random.normal(scale=SIGMA_GPS)
         self.gpsState.y=self.gpsState.y+np.random.normal(scale=SIGMA_GPS)
@@ -145,11 +149,14 @@ class emilyEmulator:
         x0[4:6] = self.actuators.copy()
         # propagate for dt
         y = scipy.integrate.odeint(eqom,x0,[0.0,dt],args=(np.array([self.rudd,self.thro]),) )
+        #print(eqom(y[-1,:].transpose(),0.0,np.array([self.rudd,self.thro] )) )
         # update the state
         self.velstate = y[-1,2:4]
         self.actuators = y[-1,4:6]
         self.truthState.x = y[-1,0]
         self.truthState.y = y[-1,1]
+        self.truthState.v = y[-1,2]
+        self.truthState.hdg = y[-1,3]
         # compute the lat lon
         self.truthState.XY2latLon()
         # set the time
@@ -187,6 +194,8 @@ class process:
         self.timer_1Hz = self.timer_1Hz + 1.0
         return
     def loop_5Hz(self,tNow):
+        # HACK print the truth state
+        #print("%g,%g,%g,%g" % (tNow,self.emily.velstate[0],self.emily.actuators[1],self.emily.thro))
         # get GPS and send to buffer
         self.emily.sampleGps()
         buf = bytes()

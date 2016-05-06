@@ -4,7 +4,10 @@
 import pygame
 
 class joystick:
-    def __init__(self):
+    ## Constructor
+    #
+    # @param[in] dw_interface: boolean, set to true to enable BACKSPACE and SPACEBAR keys to set synthetic waypoints and toggle control mode, respectively
+    def __init__(self,dw_interface=False):
         pygame.init()
         ## list of joysticks
         self.joysticks = []
@@ -14,6 +17,12 @@ class joystick:
         self.throttleCmd = 0.0
         ## flag to use keyboard
         self.useKeyboard = False
+        ## flag: is the debugging interface on?
+        self.debug_interface=dw_interface
+        ## control_mode: boolean,set to True to toggle the control mode between two options
+        self.control_mode = False
+        ## new_waypoint: boolean, set to True when you want the main process to generate a new synthetic waypoint.
+        self.new_waypoint = False
         # initialize joysticks
         num = pygame.joystick.get_count()
         if num < 1:
@@ -26,6 +35,13 @@ class joystick:
             background = background.convert()
             background.fill((255, 255, 255))
         else:
+            # turn on the screen if we're debugging on joystick mode
+            if self.debug_interface:
+                screen = pygame.display.set_mode((320, 240))
+                pygame.display.set_caption("Active window for keyboard control")
+                background = pygame.Surface(screen.get_size())
+                background = background.convert()
+                background.fill((255, 255, 255))
             for i in range(num):
                 # create an Joystick object in our list
                 self.joysticks.append(pygame.joystick.Joystick(i))
@@ -63,6 +79,15 @@ class joystick:
                         self.rudderCmd = 0.0
                     if event.key == pygame.K_d:
                         self.rudderCmd = 0.0
+            # if using the debugging interface, check for keydown events to toggle things
+            if self.debug_interface:
+                if event.type == pygame.KEYDOWN:
+                    # spacebar: toggle control mode
+                    if event.key == pygame.K_SPACE:
+                        self.control_mode = True
+                    # backspace: create a new synthetic waypoint
+                    if event.key == pygame.K_BACKSPACE:
+                        self.new_waypoint = True
 
 
     def __del__(self):

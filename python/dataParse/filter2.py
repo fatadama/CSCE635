@@ -5,6 +5,8 @@ import math
 import sys
 sys.path.append('../../../estimation/filters/python/ekf')
 import ekf
+sys.path.append('../xbee_bridge')
+from filter_dynamics import propagate, propGradient, processMatrix, measurement, measurementGradient, sigma_jerk, sigma_gps
 
 # state: GPS time, X, Y, speed, heading (rad) - used for outlier rejection
 def acceptGps(state,stateLast,verbose=False):
@@ -23,63 +25,7 @@ def acceptGps(state,stateLast,verbose=False):
         if verbose:
             print('moved too much')
         return False
-    '''
-    if abs(state[3]-stateLast[3]) > 10.0:
-        # speed changed too much
-        if verbose:
-            print('speed changed too much')
-        return False
-    if abs(state[4]-stateLast[4]) > math.pi:
-        # heading changed too much
-        if verbose:
-            print('heading changed too much')
-        return False
-    if abs(state[4]) > 2.0*math.pi:
-        # headiing invalid
-        if verbose:
-            print('bad heading')
-        return False
-    if abs(state[3]) > 100.0:
-        # velocity bad
-        if verbose:
-            print('bad velocity')
-        return False
-    '''
     return True
-
-
-## Propagate the equations of motion
-# x[0:1] = position
-# x[2:3] = velocity
-# x[4:5] = acceleration
-def propagate(x,t,u):
-    dx = np.zeros(6)
-    dx[0:2] = x[2:4]
-    dx[2:4] = x[4:6]
-    dx[4:6] = 0.0
-    return dx
-
-def propGradient(x,t,u):
-    F = np.zeros((6,6))
-    F[0,2] = 1.0;
-    F[1,3] = 1.0
-    F[2,4] = 1.0
-    F[3,5] = 1.0
-    return F
-
-def processMatrix(x,t,u):
-    G = np.zeros((6,2))
-    G[4:6,:] = np.eye(2)
-    return G
-
-def measurement(x,t):
-    y = x[0:2].copy()
-    return y
-
-def measurementGradient(x,t):
-    H=np.zeros((2,6))
-    H[0:2,0:2]=np.eye(2)
-    return H
 
 # path to files
 path = '../joystick/20160430'
@@ -111,10 +57,6 @@ control = control[ci:,:]
 gpsXY = np.zeros((len(gps),2))
 gpsXY[:,0] = (gps[:,3]-gpsHome[1])*111318.845 # X
 gpsXY[:,1] = (gps[:,2]-gpsHome[0])*111318.845 # Y
-
-# 1-sigma in the process noise for heading gain
-sigma_gps = 3.0/3.0# meters, 1-sigma
-sigma_jerk = 0.5
 
 Qkin = np.diag([math.pow(sigma_jerk,2.0),math.pow(sigma_jerk,2.0)])
 Rkin = np.diag([math.pow(sigma_gps,2.0),math.pow(sigma_gps,2.0)])
