@@ -6,26 +6,7 @@ import sys
 sys.path.append('../../../estimation/filters/python/ekf')
 import ekf
 sys.path.append('../xbee_bridge')
-from filter_dynamics import propagate, propGradient, processMatrix, measurement, measurementGradient, sigma_jerk, sigma_gps
-
-# state: GPS time, X, Y, speed, heading (rad) - used for outlier rejection
-def acceptGps(state,stateLast,verbose=False):
-    if state[0] < stateLast[0]:
-        # backward in time - reject
-        if verbose:
-            print('back in time')
-        return False
-    if abs(state[0]-stateLast[0]) > 1000.0:
-        # time parse error - reject
-        if verbose:
-            print('large dt')
-        return False
-    if abs( state[1]-stateLast[1] ) > 25.0 or abs( state[2]-stateLast[2] ) > 25.0:
-        # moved more than 10 meters: reject
-        if verbose:
-            print('moved too much')
-        return False
-    return True
+from filter_dynamics import propagate, propGradient, processMatrix, measurement, measurementGradient, sigma_jerk, sigma_gps, acceptGps
 
 # path to files
 path = '../joystick/20160430'

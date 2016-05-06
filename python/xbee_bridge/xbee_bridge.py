@@ -111,6 +111,8 @@ class bridgeProcess():
     def loop_1Hz(self,tNow):
         # put XBee heartbeat in TX buffer
         self.txBuffer+=esp.pack_heartbeat(esp.ESP_ID_GROUNDSTATION,esp.ESP_ID_BOAT,tNow)
+        # print the status
+        print("Secs last message: %8.6f Secs heartbeat: %8.6f Secs GPS: %8.6f" % (tNow-self.state.timeLastMsg[0],tNow-self.state.timeLastMsg[1],tNow-self.state.timeLastMsg[2]))
         return
     def loop_10Hz(self,tNow):
         if self.state.control_mode == 0:# if control_mode == teleop, pass through joystick
@@ -143,6 +145,9 @@ class bridgeProcess():
         # parse from xbee
         (num,msgs) = self.espParser.parseBytes(ch)
         num = len(msgs)
+        # if get messages, save the time of last message
+        if num > 0:
+            self.state.timeLastMsg[0] = tNow
         # parse messages
         for k in range(num):
             # message id
@@ -189,6 +194,9 @@ class bridgeProcess():
         # message id
         msg_id = struct.unpack('B',msg[2])[0]
         if msg_id == esp.message_gps_pos():
+            # store the time
+            self.state.timeLastMsg[2] = tNow
+            # unpack
             (len2,lon,lat,t,v,hdg,status) = esp.unpack_gps_pos(msg)
             # set new_data to true
             self.new_data = True
@@ -204,6 +212,9 @@ class bridgeProcess():
             self.log_control(tNow,rudd,thro)
             #print("CONTROL: %f,%f,t=%f" % (rudd,thro,tNow))
         if msg_id == esp.message_heartbeat():
+            # save time
+            self.state.timeLastMsg[1] = tNow
+            # unpack
             (len2,source_id,dest_id,syst) = esp.unpack_heartbeat(msg)
             # do stuff
             #print("HEARTBEAT: %i,%i,%f,t=%f" % (source_id,dest_id,syst,tNow))
@@ -301,6 +312,8 @@ def main():
             if item[1]=='True':
                 debug_pygame_interface=True
                 print('Debug interface in pygame enabled')
+                print("\tUse SPACE to toggle between teleoperation and automatic control mode ")
+                print("\tUse BACKSPACE to generate a synthetic waypoint at debug_waypoint_radius meters and debug_waypoint_angle degrees")
         if item[0] == 'debug_waypoint_radius':
             debug_waypoint_radius=float(item[1])
             print('Fake waypoint target at %g meters' % (debug_waypoint_radius))

@@ -16,7 +16,7 @@ import ekf
 ## Conversion factor for (degrees->radians->arc length at mean Earth equatorial radius)
 GPS_D2R_RE = 111318.845
 ## Smoothing factor to use on measured GPS values
-SMOOTH_ALPHA = 0.75
+SMOOTH_ALPHA = 0.25
 
 ## Lowpass filter an input to return a new, smoothed state
 #
@@ -55,6 +55,7 @@ class gps_state():
     # @param[in] vel speed in m/s
     # @param[in] h heading in radians, relative to north. (positive == east)
     def update(self,lon_int,lat_int,t,vel,h):
+        print('%10li %10li %11.6g %11.6g' % (lat_int,lon_int,self.x,self.y))
         self.time = t
         if self.ready:
             self.lon = lowpass(self.lon, 1.0e-7*float(lon_int), SMOOTH_ALPHA)
@@ -98,6 +99,12 @@ class xbee_bridge_state():
         self.gpsState = gps_state()
         ## local copy of the EKF state: [x(m),y(m),V(m/s),heading(radians)]
         self.filterState = np.zeros(4)
+        ## time of last message
+        #
+        # timeLastMsg[0] = the last message of any type
+        # timeLastMsg[1] = the last heartbeat
+        # timeLastMsg[2] = the last GPS message
+        self.timeLastMsg = [0.0,0.0,0.0]
         # process noise matrix for the zero-jerk filter
         Qkin = np.diag([math.pow(filter_dynamics.sigma_jerk,2.0),math.pow(filter_dynamics.sigma_jerk,2.0)])
         ## EKF object
@@ -108,7 +115,7 @@ class xbee_bridge_state():
         if logDir is not None:
             self.log = open(logDir+"bridgeStateLog.csv",'w+')
             # write the headers
-            self.log.write('time(sec),X(m),Y(m),VX(m/s),VY(m/s),AX(m/s^2),AY(m/s^2),Xm(m),Ym(m),Vm(m),Hdgm(rad)')
+            self.log.write('time(sec),raw x,raw y,raw V,raw hdg,X(m),Y(m),VX(m/s),VY(m/s),AX(m/s^2),AY(m/s^2),Xm(m),Ym(m),Vm(m),Hdgm(rad)')
             for k in range(6):
                 for j in range(6):
                     self.log.write(',P_%d%d' % (k+1,j+1))
@@ -124,6 +131,9 @@ class xbee_bridge_state():
     # @param[in] vel speed in m/s
     # @param[in] h heading in radians, relative to north. (positive == east)
     def update(self,lon_int,lat_int,t,vel,h):
+        # rejection criteria
+        if self.gpsState.ready and (abs( 1.0e-7*float(lon_int)-self.gpsState.lon ) > 0.01 or abs( 1.0e-7*float(lat_int)-self.gpsState.lat ) > 0.01):
+            return
         if self.gpsState.ready==False:
             self.gpsState.update(lon_int,lat_int,t,vel,h)
             # initialize the filter
@@ -133,23 +143,31 @@ class xbee_bridge_state():
         else:
             # update the raw GPS object
             self.gpsState.update(lon_int,lat_int,t,vel,h)
-            # Compute the propagation interval for the filter
+            # test that dt is not negative
             dt = t-self.EKF.t
-            # propagate the filter to the current time
-            self.EKF.propagateOde(dt)
-            # call the filter
-            self.EKF.update(t,np.array([self.gpsState.x,self.gpsState.y]),filter_dynamics.measurement,filter_dynamics.measurementGradient,filter_dynamics.Rkin)
-        # copy the filter state to local
-        self.filterState[0:2] = self.EKF.xhat[0:2].copy()
-        self.filterState[2] = np.sqrt( np.sum(np.power(self.EKF.xhat[2:4],2.0)) )
-        # If we're moving, use the velocity to approximate the heading; else, use the GPS heading
-        if self.filterState[2] > 1.0:
-            self.filterState[3] = np.arctan2( self.EKF.xhat[3],self.EKF.xhat[2] )
+            if dt > 0:
+                # propagate the filter to the current time
+                self.EKF.propagateOde(dt)
+                # call the filter
+                self.EKF.update(t,np.array([self.gpsState.x,self.gpsState.y]),filter_dynamics.measurement,filter_dynamics.measurementGradient,filter_dynamics.Rkin)
+        # if the filter state matches the reading well enough, use it
+        if math.sqrt( np.sum(np.power(self.EKF.xhat[0:2]-np.array([self.gpsState.x,self.gpsState.y]),2.0)) ) < 10.0:
+            # copy the filter state to local
+            self.filterState[0:2] = self.EKF.xhat[0:2].copy()
+            self.filterState[2] = np.sqrt( np.sum(np.power(self.EKF.xhat[2:4],2.0)) )
+            # If we're moving, use the velocity to approximate the heading; else, use the GPS heading
+            if self.filterState[2] > 1.0:
+                self.filterState[3] = np.arctan2( self.EKF.xhat[3],self.EKF.xhat[2] )
+            else:
+                self.filterState[3] = self.gpsState.hdg
         else:
+            self.filterState[0] = self.gpsState.x
+            self.filterState[1] = self.gpsState.y
+            self.filterState[2] = self.gpsState.v
             self.filterState[3] = self.gpsState.hdg
         # log the status
         if self.log is not None:
-            self.log.write('%f,%f,%f,%f,%f,%f,%f' % (t,self.EKF.xhat[0],self.EKF.xhat[1],self.EKF.xhat[2],self.EKF.xhat[3],self.EKF.xhat[4],self.EKF.xhat[5]))
+            self.log.write('%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f' % (t,self.gpsState.x,self.gpsState.y,self.gpsState.v,self.gpsState.hdg,self.EKF.xhat[0],self.EKF.xhat[1],self.EKF.xhat[2],self.EKF.xhat[3],self.EKF.xhat[4],self.EKF.xhat[5]))
             self.log.write(',%f,%f,%f,%f' % (self.gpsState.x,self.gpsState.y,self.gpsState.v,self.gpsState.hdg))
             for kk in range(6):
                 for j in range(6):
