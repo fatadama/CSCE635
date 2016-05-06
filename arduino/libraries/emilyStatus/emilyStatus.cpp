@@ -25,8 +25,8 @@ void gpsData::set(double lati,double loni,float ti){
 
 void gpsData::set(int32_t lati, int32_t loni, float ti, float vi, float hdgi){
   v = (vi*KNOTS2MS);
-  //hdg = (hdgi*DEG2RAD);
-  hdg = hdgi;// input is already in radians it appears
+  hdg = (hdgi*DEG2RAD);
+  //hdg = hdgi;// input is already in radians it appears
   // call the base function
   set(lati,loni,ti);
 }

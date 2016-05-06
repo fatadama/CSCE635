@@ -203,8 +203,13 @@ uint8_t emilyGPS::send_command_restart_cold(uint8_t*buffer){
 void emilyGPS::sync(emilyStatus*status){
   if (gpsNow.is_new()){
     // copy the lat/lon and other data to the global structure
-    status->gpsNow.set(gpsNow.lat,gpsNow.lon,gpsNow.t,gpsNow.v,gpsNow.hdg);
-    // HACK: call get() to make the gps data no longer new
+    status->gpsNow.lat = gpsNow.lat;
+    status->gpsNow.lon = gpsNow.lon;
+    status->gpsNow.v = gpsNow.v;
+    status->gpsNow.hdg = gpsNow.hdg;
+    status->gpsNow.x = gpsNow.y;
+    status->gpsNow.x = gpsNow.y;
+    // HACK: call get() to make the gps data no longer flag as new
     float x,y;
     gpsNow.get(&x,&y);
   }
