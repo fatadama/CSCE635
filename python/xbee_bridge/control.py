@@ -10,9 +10,9 @@ import math
 import numpy as np
 
 headingThresholdDegrees = 20.0
-headingThreshold = 20.0*math.pi/180.0
+headingThreshold = headingThresholdDegrees*math.pi/180.0
 ## range threshold: if closer than this value we assume we're at the target
-rangeThreshold = 5.0
+rangeThreshold = 3.0
 
 ## Compute the heading error h1 - h2
 def headingError(h1,h2):
@@ -87,8 +87,14 @@ class control():
             self.throttle = 0.3
             self.rudder = 1.0
         else:# TODO do PID on heading
-            self.rudder = self.headingPid.update(tNow,self.psi,self.headingRef,diffFun=headingError)
-            self.throttle = 0.6
+            #self.rudder = self.headingPid.update(tNow,self.psi,self.headingRef,diffFun=headingError)
+            #self.throttle = 0.6
+            self.rudder=0.0
+            self.throttle=0.0
+        if abs(deltaPsi) <= headingThreshold:
+            print("%13s,%8.6f,%8.6f,%6.4f,%6.4f" % ("PID MODE",self.headingRef, self.rangeRef, self.rudder, self.throttle))
+        else:
+            print("%13s,%8.6f,%8.6f,%6.4f,%6.4f" % ("TURNING MODE",self.headingRef, self.rangeRef, self.rudder, self.throttle))
         # log to file
         self.logSelf(tNow)
     ## Write current state to file
@@ -141,9 +147,7 @@ class PIDclass:
         self.pidstate[2] = 0.0
         self.flag_init = False
         self.stateLast = 0.0
-        self.u[0] = 0.0
-        self.u[1] = 0.0
-        self.u[2] = 0.0
+        self.u = np.array([0.0,0.0,0.0])
         return
     ## Update - receive a new measurement, compute the control output
     # @param[in] t the current time, used to compute derivative and integral terms

@@ -68,7 +68,7 @@ class bridgeProcess():
         ## dw_angle: relative angle to synthetic waypoints as a float in radians, positive is to the right
         self.dw_angle = dw_angle
         ## synthetic waypoint object used in debugging
-        self.syntheticWaypoint = synthetic_waypoint()
+        self.syntheticWaypoint = synthetic_waypoint(logDir=foldername)
         ## joystick interface class
         self.joy = joystick.joystick(dw_interface)
         ## hardware_interface class object with default SIL arguments
@@ -124,18 +124,12 @@ class bridgeProcess():
             if self.dw_interface:# read the joystick to keep updating the inputs
                 self.joy.read()
                 # update the synthetic waypoint with the current state
-                self.syntheticWaypoint.update(self.state.filterState[0],self.state.filterState[1],self.state.filterState[3])
+                self.syntheticWaypoint.update(tNow,self.state.filterState[0],self.state.filterState[1],self.state.filterState[3])
                 # update the reference to the control object
                 self.control.vectorRef(self.syntheticWaypoint.range, self.syntheticWaypoint.bearing)
             # call the control object with the current state
             self.control.update(tNow)
             #print( self.control.headingRef, self.control.rangeRef, self.control.rudder, self.control.throttle )
-            deltaHdg = control.headingError(self.control.psi,self.control.headingRef)
-            # debug status output
-            if abs(deltaHdg) <= control.headingThreshold:
-                print("%13s,%8.6f,%8.6f,%6.4f,%6.4f" % ("PID MODE",self.control.headingRef, self.control.rangeRef, self.control.rudder, self.control.throttle))
-            else:
-                print("%13s,%8.6f,%8.6f,%6.4f,%6.4f" % ("TURNING MODE",self.control.headingRef, self.control.rangeRef, self.control.rudder, self.control.throttle))
             self.txBuffer+=esp.pack_control(self.control.rudder,self.control.throttle)
             self.log_controlOut(tNow,self.control.rudder,self.control.throttle)
         return
@@ -249,7 +243,8 @@ class bridgeProcess():
 # uses: call create(range, bearing, x, y, hdg) to create a waypoint at 'range' meters and 'bearing' radians relative to EMILY's 'x','y' location and heading 'hdg' in some interial reference frame. Heading is radians, positive = east of north.
 #       call update(x,y,hdg) to update the values of a created waypoint based on EMILY's current 'x','y' lcoation and heading 'hdg' in radians.
 #       values are stored in self.range, self.bearing
-class synthetic_waypoint():
+# @param[in] logDir filepath to place logs
+class synthetic_waypoint(logDir=None):
     def __init__(self):
         ## Distance to target (meters)
         self.range = 0.0
@@ -259,17 +254,25 @@ class synthetic_waypoint():
         self.x = 0.0
         ## inertial y position of waypoint (meters)
         self.y = 0.0
-        pass
+        ## load log file
+        if logDir is not None:
+            self.log = open(logDir+'synWaypointLog.csv','w+')
+            self.log.write('time(sec),x_wp(m),y_wp(m),range(m),bearing(rad)\n')
+        else:
+            self.log = None
     ## Create a synthetic waypoint at range and bearing relative to EMILY
     # @param[in] rho the range (meters)
     # @param[in] bearing the relative angle in radians(positive is to the right of EMILY)
     def create(self,rho, bearing, x, y, hdg):
-        self.x = x+rho*math.cos(bearing)
-        self.y = y+rho*math.sin(bearing)
+        self.x = x+rho*math.cos(bearing+hdg)
+        self.y = y+rho*math.sin(bearing+hdg)
     ## After a waypoint is created, compute the range and bearing to it
-    def update(self,x,y,hdg):
+    def update(self,tNow,x,y,hdg):
         self.range = math.sqrt( math.pow(self.x-x,2.0)+math.pow(self.y-y,2.0) )
         self.bearing = math.atan2(self.y-y,self.x-x)-hdg
+        print("waypoint: %g, %g" % (self.range,self.bearing))
+        if self.log is not None:
+            self.log.write('%.12g,%g,%g,%g,%g\n' % (tNow,self.x,self.y,self.range,self.bearing))
 
 def main():
     # load settings

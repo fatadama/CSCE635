@@ -28,7 +28,7 @@ SMOOTH_ALPHA = 0.25
 def lowpass(xlast,xnew,alpha):
     return alpha*xnew + (1.0-alpha)*xlast
 
-## TODO add EKF
+## TODO fix EKF
 
 class gps_state():
     def __init__(self):
@@ -55,7 +55,7 @@ class gps_state():
     # @param[in] vel speed in m/s
     # @param[in] h heading in radians, relative to north. (positive == east)
     def update(self,lon_int,lat_int,t,vel,h):
-        print('%10li %10li %11.6g %11.6g' % (lat_int,lon_int,self.x,self.y))
+        #print('%10li %10li %11.6g %11.6g' % (lat_int,lon_int,self.x,self.y))
         self.time = t
         if self.ready:
             self.lon = lowpass(self.lon, 1.0e-7*float(lon_int), SMOOTH_ALPHA)
