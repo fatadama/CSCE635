@@ -28,14 +28,20 @@ def headingError(h1,h2):
 # @param[in] Kp proportional gains on heading during cruise
 # @param[in] Ki integral gain on heading during cruise
 # @param[in] Kd derivative gain on heading during cruise
+# @param[in] turnThrottle: the throttle value to use in "turning" mode, on [0.0,1.0]
+# @param[in] cruiseThrottle: the throttle to use while driving toward a waypoint, on [0.0 1.0]
 class control():
-    def __init__(self,logDir=None,Kp=0.0,Kd=0.0,Ki=0.0):
+    def __init__(self,logDir=None,Kp=0.0,Kd=0.0,Ki=0.0,turnThrottle=0.3,cruiseThrottle=0.6):
         # allocate memory
         self.x = 0.0
         self.y = 0.0
         self.v = 0.0
         self.psi = 0.0
         self.rangeRef = 0.0
+        ## The throttle setting while turning
+        self.throttleWhileTurning = turnThrottle
+        ## Throttle setting while doing PID on heading
+        self.throttleWhileCruising = cruiseThrottle
         ## Target heading (rads) (inertial frame)
         self.headingRef = 0.0
         ## target rudder setting
@@ -80,17 +86,15 @@ class control():
         deltaPsi = headingError(self.psi,self.headingRef)
         if deltaPsi > headingThreshold:# we are more than 20 degrees east of the target
             # turn left at a slow speed
-            self.throttle = 0.3
+            self.throttle = self.throttleWhileTurning
             self.rudder = -1.0
         if deltaPsi < -headingThreshold: # we are more than 20 degrees west of the target
             # turn right at a slow speed
-            self.throttle = 0.3
+            self.throttle = self.throttleWhileTurning
             self.rudder = 1.0
         else:# TODO do PID on heading
-            #self.rudder = self.headingPid.update(tNow,self.psi,self.headingRef,diffFun=headingError)
-            #self.throttle = 0.6
-            self.rudder=0.0
-            self.throttle=0.0
+            self.rudder = self.headingPid.update(tNow,self.psi,self.headingRef,diffFun=headingError)
+            self.throttle = self.throttleWhileCruising
         if abs(deltaPsi) <= headingThreshold:
             print("%13s,%8.6f,%8.6f,%6.4f,%6.4f" % ("PID MODE",self.headingRef, self.rangeRef, self.rudder, self.throttle))
         else:

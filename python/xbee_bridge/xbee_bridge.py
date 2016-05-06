@@ -44,8 +44,10 @@ import control
 # @param[in] dw_interface: boolean; set to True to enable SPACEBAR and BACKSPACE keys to send simple testing waypoints to EMILY
 # @param[in] dw_radius: float, (meters) range at which synthetic waypoints are generated relative to current position. Used only if dw_interface is True.
 # @param[in] dw_angle: float, angle (radians) at which synthetic waypoint is generated if dw_interface==True. Not used if dw_interface is False.
+# @param[in] turnThrottle: float, throttle value while turning
+# @param[in] cruiseThrottle: float, throttle value while cruising
 class bridgeProcess():
-    def __init__(self,logDir = '',SIL=True,port='COM4',Kp=0.0,Kd=0.0,Ki=0.0,dw_interface=False,dw_radius=0.0,dw_angle=0.0):
+    def __init__(self,logDir = '',SIL=True,port='COM4',Kp=0.0,Kd=0.0,Ki=0.0,dw_interface=False,dw_radius=0.0,dw_angle=0.0,turnThrottle=0.3,cruiseThrottle=0.6):
         # make log folder based on date/time
         dt = datetime.now()
         foldername = logDir+('%04d%02d%02d_%02d%02d%02d/' % (dt.year,dt.month,dt.day,dt.hour,dt.minute,dt.second))
@@ -79,7 +81,7 @@ class bridgeProcess():
         ## buffer of bytes to write to XBee; clear whenever written
         self.txBuffer = bytes()
         ## control object for computing control
-        self.control = control.control(logDir=foldername,Kp=Kp,Kd=Kd,Ki=Ki)
+        self.control = control.control(logDir=foldername,Kp=Kp,Kd=Kd,Ki=Ki,turnThrottle=turnThrottle,cruiseThrottle=cruiseThrottle)
         ## parser object for the serial protocol. Pass the log folder to create message logs
         self.espParser = esp.espParser(logdir=foldername)
         ## GPS log file
@@ -126,7 +128,7 @@ class bridgeProcess():
                 # update the synthetic waypoint with the current state
                 self.syntheticWaypoint.update(tNow,self.state.filterState[0],self.state.filterState[1],self.state.filterState[3])
                 # update the reference to the control object
-                self.control.vectorRef(self.syntheticWaypoint.range, self.syntheticWaypoint.bearing)
+                self.control.vectorRef(self.syntheticWaypoint.range,self.syntheticWaypoint.bearing)
             # call the control object with the current state
             self.control.update(tNow)
             #print( self.control.headingRef, self.control.rangeRef, self.control.rudder, self.control.throttle )
@@ -243,12 +245,14 @@ class bridgeProcess():
 # uses: call create(range, bearing, x, y, hdg) to create a waypoint at 'range' meters and 'bearing' radians relative to EMILY's 'x','y' location and heading 'hdg' in some interial reference frame. Heading is radians, positive = east of north.
 #       call update(x,y,hdg) to update the values of a created waypoint based on EMILY's current 'x','y' lcoation and heading 'hdg' in radians.
 #       values are stored in self.range, self.bearing
-# @param[in] logDir filepath to place logs
-class synthetic_waypoint(logDir=None):
-    def __init__(self):
-        ## Distance to target (meters)
+class synthetic_waypoint():
+    ## Constructor
+    #
+    # @param[in] logDir filepath to place logs
+    def __init__(self,logDir=None):
+        ## Distance to target (meters) relative to EMILY
         self.range = 0.0
-        ## Bearing to target (radians)
+        ## Bearing to target (radians) relative to EMILY
         self.bearing = 0.0
         ## inertial x position of waypoint (meters)
         self.x = 0.0
@@ -292,6 +296,10 @@ def main():
     debug_waypoint_radius = 5.0
     # Angle relative to EMILY (positive == right) in degrees at which to place the debug waypoint
     debug_waypoint_angle = 170.0
+    # throttle setting in turning mode
+    turnThrottle = 0.3
+    # throttle setting in cruise mode
+    cruiseThrottle = 0.6
     for item in settings.items('xbee_bridge'):
         if item[0] == 'sil':
             if item[1]=='False':
@@ -323,6 +331,12 @@ def main():
         if item[0] == 'debug_waypoint_angle':
             debug_waypoint_angle=float(item[1])
             print('Fake waypoint target at %g deg' % (debug_waypoint_angle))
+        if item[0] == 'turnthrottle':
+            turnThrottle=float(item[1])
+            print('Turning throttle = %f' % turnThrottle)
+        if item[0] == 'cruisethrottle':
+            cruiseThrottle=float(item[1])
+            print('Cruising throttle = %f' % (cruiseThrottle))
     # convert target angle to radians
     debug_waypoint_angle = debug_waypoint_angle*math.pi/180.0
     process = bridgeProcess(SIL=SIL,port=port,Kp=Kp,Kd=Kd,Ki=Ki,dw_interface=debug_pygame_interface,dw_radius=debug_waypoint_radius,dw_angle=debug_waypoint_angle)
