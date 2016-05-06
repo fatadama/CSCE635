@@ -94,10 +94,10 @@ public:
   void set_home(int32_t lat1,int32_t lon1); /*!< Change from default home lat/lon coordinates to new ones. Units are (10^-7 degrees) */
   void get(float*x,float*y);/*!< Return the current position state for control purposes. Sets the value of new_value to zero */
   gpsStatus health;/*!< Variable that states if the status of the GPS receiving is OK. See enum definition. */
+  int8_t new_value;/*!< Return 0 if the current state has already been accessed with get(). Set to 1 whenever set() is called. HACK make this a public object  */
 private:
   int32_t lat_home;
   int32_t lon_home;
-  int8_t new_value;/*!< Return 0 if the current state has already been accessed with get(). Set to 1 whenever set() is called. */
 };
 
 class emilyStatus
