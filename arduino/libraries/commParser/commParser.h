@@ -10,7 +10,7 @@
 /** After this many milliseconds without receiving a message, set comm mode to LOST */
 #define TIMEOUT_LOST_MILLIS 10000
 /** Target stream period for GPS messages in millliseconds */
-#define STREAM_PERIOD_GPS 200
+#define STREAM_PERIOD_GPS 100
 /** Target stream period for control messages in milliseconds */
 #define STREAM_PERIOD_CONTROL 200
 /** Target stream rate for heartbeat in milliseconds */
