@@ -23,8 +23,8 @@ emilyControl::emilyControl(){
   throttle_pid.set_Kd(0.0);
   throttle_pid.set_integral_max(0.1);
   // initialize the lowpass objects for the throttle and rudder commanded
-  throttle.set_alpha(0.05);
-  rudder.set_alpha(0.05);
+  throttle.set_alpha(0.75);
+  rudder.set_alpha(0.75);
 }
 
 void emilyControl::misc_tasks(uint32_t millis,emilyStatus status){
