@@ -72,7 +72,7 @@ int16_t emilyGPS::parseSentence(){
       gpsLast.hdg = gpsNow.hdg;
     }
     // do outlier rejection
-    if ( acceptGps(&gpsNow,&gpsLast)){}
+    if ( acceptGps(&gpsNow,&gpsLast)){
       // set the status object including speed and heading
       gpsNow.set(lat,lon,timei,v,hdg);
     }
