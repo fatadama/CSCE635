@@ -95,6 +95,8 @@ class xbee_bridge_state():
     #
     # @param[in] logDir: relative file path to the directory to log.
     def __init__(self,logDir=None):
+        ## Lasst update time
+        self.tLast = 0.0
         ## gpsState object for holding the state of EMILY
         self.gpsState = gps_state()
         ## local copy of the EKF state: [x(m),y(m),V(m/s),heading(radians)]
@@ -105,6 +107,12 @@ class xbee_bridge_state():
         # timeLastMsg[1] = the last heartbeat
         # timeLastMsg[2] = the last GPS message
         self.timeLastMsg = [0.0,0.0,0.0]
+        ## Current rudder setting
+        self.rudderCmd=0.0
+        ## Current throttle
+        self.throttleCmd=0.0
+        ## HACK Throttle moving average used to see when we're fast enough to filter
+        self.throttleAvg = 0.0
         # process noise matrix for the zero-jerk filter
         Qkin = np.diag([math.pow(filter_dynamics.sigma_jerk,2.0),math.pow(filter_dynamics.sigma_jerk,2.0)])
         ## EKF object
@@ -119,20 +127,25 @@ class xbee_bridge_state():
             for k in range(6):
                 for j in range(6):
                     self.log.write(',P_%d%d' % (k+1,j+1))
+            self.log.write(',EKF time(sec),systime(sec)')
             self.log.write('\n')
         else:
             self.log = None
         return
     ## Update the state with a new GPS measurement from EMILY. Do filtering.
     #
+    # @param[in] tNow (sec) The current time. Used to determine if large change in GPS time is error or not
     # @param[in] lon_int ( longitude (deg) x 10^7 ) as an integer
     # @param[in] lat_int ( Latitude (deg) x 10^7 ) as an integer
     # @param[in] t time in seconds
     # @param[in] vel speed in m/s
     # @param[in] h heading in radians, relative to north. (positive == east)
-    def update(self,lon_int,lat_int,t,vel,h):
+    def update(self,tNow,lon_int,lat_int,t,vel,h):
+        # Compute how long it's been since the system updated
+        dtReal = tNow - self.tLast
         # rejection criteria
         if self.gpsState.ready and (abs( 1.0e-7*float(lon_int)-self.gpsState.lon ) > 0.01 or abs( 1.0e-7*float(lat_int)-self.gpsState.lat ) > 0.01):
+            self.tLast = tNow
             return
         if self.gpsState.ready==False:
             self.gpsState.update(lon_int,lat_int,t,vel,h)
@@ -145,11 +158,14 @@ class xbee_bridge_state():
             self.gpsState.update(lon_int,lat_int,t,vel,h)
             # test that dt is not negative
             dt = t-self.EKF.t
-            if dt > 0:
+            if dt>0 and dt<10.0*max([dtReal,1.0]):
                 # propagate the filter to the current time
                 self.EKF.propagateOde(dt)
-                # call the filter
+                # update the filter
                 self.EKF.update(t,np.array([self.gpsState.x,self.gpsState.y]),filter_dynamics.measurement,filter_dynamics.measurementGradient,filter_dynamics.Rkin)
+            else:
+                print("Reject for back in time: dt = %g, dtReal=%g" % (dt,dtReal))
+                pass
         # if the filter state matches the reading well enough, use it
         if math.sqrt( np.sum(np.power(self.EKF.xhat[0:2]-np.array([self.gpsState.x,self.gpsState.y]),2.0)) ) < 10.0:
             # copy the filter state to local
@@ -165,11 +181,28 @@ class xbee_bridge_state():
             self.filterState[1] = self.gpsState.y
             self.filterState[2] = self.gpsState.v
             self.filterState[3] = self.gpsState.hdg
+        # reset the filter if things look bad
+        # are the covariance diagonals zero?
+        if (self.EKF.Pk[0,0]==0.0) or (self.EKF.Pk[1,1]==0.0) or (self.EKF.Pk[2,2]==0.0) or (self.EKF.Pk[3,3]==0.0) or (self.EKF.Pk[4,4]==0.0) or (self.EKF.Pk[5,5]==0.0) or (np.any(np.isnan(np.diag(self.EKF.Pk)))):
+            # initialize the filter
+            xk0 = np.array([self.gpsState.x,self.gpsState.y,0.0,0.0,0.0,0.0]) # initial state
+            Pk0 = np.diag([math.pow(filter_dynamics.sigma_gps,2.0),math.pow(filter_dynamics.sigma_gps,2.0),1.0,1.0,1.0,1.0]) # initial covariance
+            self.EKF.init_P(xk0,Pk0,t)
+        # call the log
+        self.logFun(t,tNow)
+        # update the time tracker
+        self.tLast = tNow
+    ## write to the log file
+    #
+    # @param[in] t the time from GPS
+    # @param[in] tNow the current system time
+    def logFun(self,t,tNow):
         # log the status
         if self.log is not None:
-            self.log.write('%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f' % (t,self.gpsState.x,self.gpsState.y,self.gpsState.v,self.gpsState.hdg,self.EKF.xhat[0],self.EKF.xhat[1],self.EKF.xhat[2],self.EKF.xhat[3],self.EKF.xhat[4],self.EKF.xhat[5]))
+            self.log.write('%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f' % (t,self.filterState[0],self.filterState[1],self.filterState[2],self.filterState[3],self.EKF.xhat[0],self.EKF.xhat[1],self.EKF.xhat[2],self.EKF.xhat[3],self.EKF.xhat[4],self.EKF.xhat[5]))
             self.log.write(',%f,%f,%f,%f' % (self.gpsState.x,self.gpsState.y,self.gpsState.v,self.gpsState.hdg))
             for kk in range(6):
                 for j in range(6):
                     self.log.write(',%f' % (self.EKF.Pk[kk,j]))
+            self.log.write(',%f,%f' % (self.EKF.t,tNow))
             self.log.write('\n')

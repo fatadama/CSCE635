@@ -120,8 +120,8 @@ class bridgeProcess():
         if self.state.control_mode == 0:# if control_mode == teleop, pass through joystick
             self.joy.read()
             # put rudder, throttle in Xbee TX buffer
-            self.txBuffer+=esp.pack_control(self.joy.rudderCmd,self.joy.throttleCmd)
-            self.log_controlOut(tNow,self.joy.rudderCmd,self.joy.throttleCmd)
+            self.state.rudderCmd=self.joy.rudderCmd
+            self.state.throttleCmd=self.joy.throttleCmd
         elif self.state.control_mode == 1:# if control_mode == pfields, compute control
             if self.dw_interface:# read the joystick to keep updating the inputs
                 self.joy.read()
@@ -131,9 +131,12 @@ class bridgeProcess():
                 self.control.vectorRef(self.syntheticWaypoint.range,self.syntheticWaypoint.bearing)
             # call the control object with the current state
             self.control.update(tNow)
-            #print( self.control.headingRef, self.control.rangeRef, self.control.rudder, self.control.throttle )
-            self.txBuffer+=esp.pack_control(self.control.rudder,self.control.throttle)
-            self.log_controlOut(tNow,self.control.rudder,self.control.throttle)
+            self.state.rudderCmd=self.control.rudder
+            self.state.throttleCmd=self.control.throttle
+        self.txBuffer+=esp.pack_control(self.state.rudderCmd,self.state.throttleCmd)
+        self.log_controlOut(tNow,self.state.rudderCmd,self.state.throttleCmd)
+        # update the average throttle
+        self.state.throttleAvg = 0.9*self.state.throttleAvg+0.1*self.state.throttleCmd
         return
     def loop_50Hz(self,tNow):
         # Read XBee
@@ -166,10 +169,15 @@ class bridgeProcess():
                 print("Toggle control mode")
                 self.joy.control_mode = False
             if self.joy.new_waypoint:
-                # TODO create new waypoint
-                self.joy.new_waypoint = False
-                self.syntheticWaypoint.create(self.dw_radius,self.dw_angle,self.state.filterState[0],self.state.filterState[1],self.state.filterState[3])
-                print("Created waypoint at %g, %g" % (self.syntheticWaypoint.x,self.syntheticWaypoint.y))
+                # if throttle is high enough, WAIT
+                if self.state.throttleAvg <= 0.25:
+                    print("Going too slow to create waypoint, WAIT")
+                    self.syntheticWaypoint.create(10.0,0.0,self.state.filterState[0],self.state.filterState[1],self.state.filterState[3])
+                else:
+                    # if we're going fast enough, set the new waypoint:
+                    self.joy.new_waypoint = False
+                    self.syntheticWaypoint.create(self.dw_radius,self.dw_angle,self.state.filterState[0],self.state.filterState[1],self.state.filterState[3])
+                    print("Created waypoint at %g, %g" % (self.syntheticWaypoint.x,self.syntheticWaypoint.y))
         # Read IPC
         #   Update control_mode
         #   If control_mode == pfields
@@ -198,7 +206,7 @@ class bridgeProcess():
             self.new_data = True
             # TODO filter state
             # write to state
-            self.state.update(lon,lat,t,v,hdg)
+            self.state.update(tNow,lon,lat,t,v,hdg)
             # log to file
             self.log_gps(tNow,lon,lat,t,v,hdg,status)
             #print("GPS_POS: %d,%d,%f,%f,%f,%d" % (lon,lat,t,v,hdg,status))

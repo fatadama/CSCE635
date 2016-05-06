@@ -37,7 +37,7 @@ class control():
         self.y = 0.0
         self.v = 0.0
         self.psi = 0.0
-        self.rangeRef = 0.0
+        self.rangeRef = 50.0
         ## The throttle setting while turning
         self.throttleWhileTurning = turnThrottle
         ## Throttle setting while doing PID on heading
@@ -83,14 +83,17 @@ class control():
             # log to file
             self.logSelf(tNow)
             return
+        # else, we're far from target: set the throttle on so we can figure out our speed
+        self.throttle = self.throttleWhileTurning
+
         deltaPsi = headingError(self.psi,self.headingRef)
         if deltaPsi > headingThreshold:# we are more than 20 degrees east of the target
             # turn left at a slow speed
-            self.throttle = self.throttleWhileTurning
+            #self.throttle = self.throttleWhileTurning
             self.rudder = -1.0
         if deltaPsi < -headingThreshold: # we are more than 20 degrees west of the target
             # turn right at a slow speed
-            self.throttle = self.throttleWhileTurning
+            #self.throttle = self.throttleWhileTurning
             self.rudder = 1.0
         else:# TODO do PID on heading
             self.rudder = self.headingPid.update(tNow,self.psi,self.headingRef,diffFun=headingError)
