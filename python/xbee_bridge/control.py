@@ -9,10 +9,10 @@ import math
 # we plan on reading in numpy vectors - do I need to import numpy for this??
 import numpy as np
 
-headingThresholdDegrees = 20.0
+headingThresholdDegrees = 40.0
 headingThreshold = headingThresholdDegrees*math.pi/180.0
 ## range threshold: if closer than this value we assume we're at the target
-rangeThreshold = 3.0
+rangeThreshold = 5.0
 
 ## Compute the heading error h1 - h2
 def headingError(h1,h2):

@@ -49,11 +49,8 @@ import control
 class bridgeProcess():
     def __init__(self,logDir = '',SIL=True,port='COM4',Kp=0.0,Kd=0.0,Ki=0.0,dw_interface=False,dw_radius=0.0,dw_angle=0.0,turnThrottle=0.3,cruiseThrottle=0.6):
         # make log folder based on date/time
-        dt = datetime.now()
-        foldername = logDir+('%04d%02d%02d_%02d%02d%02d/' % (dt.year,dt.month,dt.day,dt.hour,dt.minute,dt.second))
-        if not os.path.exists(os.path.dirname(foldername)):
-            os.makedirs(foldername)
-            ## state object from xbee_bridge_state
+        foldername=logDir
+        ## state object from xbee_bridge_state
         self.state = xbee_bridge_state(logDir=foldername)
         ## start time - used to reduce all times to something more convenient for floats
         self.tStart = time.time()
@@ -290,8 +287,11 @@ class synthetic_waypoint():
     # @param[in] rho the range (meters)
     # @param[in] bearing the relative angle in radians(positive is to the right of EMILY)
     def create(self,rho, bearing, x, y, hdg):
-        self.x = x+rho*math.cos(bearing+hdg)
-        self.y = y+rho*math.sin(bearing+hdg)
+        # HACK goto origin
+        self.x = 0.0
+        self.y = 0.0
+        #self.x = x+rho*math.cos(bearing+hdg)
+        #self.y = y+rho*math.sin(bearing+hdg)
     ## After a waypoint is created, compute the range and bearing to it
     def update(self,tNow,x,y,hdg):
         self.range = math.sqrt( math.pow(self.x-x,2.0)+math.pow(self.y-y,2.0) )
@@ -361,7 +361,17 @@ def main():
             print('Cruising throttle = %f' % (cruiseThrottle))
     # convert target angle to radians
     debug_waypoint_angle = debug_waypoint_angle*math.pi/180.0
-    process = bridgeProcess(SIL=SIL,port=port,Kp=Kp,Kd=Kd,Ki=Ki,dw_interface=debug_pygame_interface,dw_radius=debug_waypoint_radius,dw_angle=debug_waypoint_angle)
+    # make the log directory
+    dt = datetime.now()
+    foldername = ''+('%04d%02d%02d_%02d%02d%02d/' % (dt.year,dt.month,dt.day,dt.hour,dt.minute,dt.second))
+    if not os.path.exists(os.path.dirname(foldername)):
+        os.makedirs(foldername)
+    # copy the settings file to the foldername where logs go
+    fsettings = open(foldername+'settings_copy.ini','wt')
+    settings.write(fsettings)
+    print("Wrote settings to file %s" % fsettings.name)
+    fsettings.close()
+    process = bridgeProcess(logDir=foldername,SIL=SIL,port=port,Kp=Kp,Kd=Kd,Ki=Ki,dw_interface=debug_pygame_interface,dw_radius=debug_waypoint_radius,dw_angle=debug_waypoint_angle)
     try:
         while True: # main loop
             process.main_loop()
