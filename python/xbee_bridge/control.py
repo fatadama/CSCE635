@@ -91,17 +91,16 @@ class control():
             # turn left at a slow speed
             #self.throttle = self.throttleWhileTurning
             self.rudder = -1.0
-        if deltaPsi < -headingThreshold: # we are more than 20 degrees west of the target
+            print("%13s,%8.6f,%8.6f,%6.4f,%6.4f" % ("TURNING MODE",self.headingRef, self.rangeRef, self.rudder, self.throttle))
+        elif deltaPsi < -headingThreshold: # we are more than 20 degrees west of the target
             # turn right at a slow speed
             #self.throttle = self.throttleWhileTurning
             self.rudder = 1.0
+            print("%13s,%8.6f,%8.6f,%6.4f,%6.4f" % ("TURNING MODE",self.headingRef, self.rangeRef, self.rudder, self.throttle))
         else:# TODO do PID on heading
             self.rudder = self.headingPid.update(tNow,self.psi,self.headingRef,diffFun=headingError)
             self.throttle = self.throttleWhileCruising
-        if abs(deltaPsi) <= headingThreshold:
             print("%13s,%8.6f,%8.6f,%6.4f,%6.4f" % ("PID MODE",self.headingRef, self.rangeRef, self.rudder, self.throttle))
-        else:
-            print("%13s,%8.6f,%8.6f,%6.4f,%6.4f" % ("TURNING MODE",self.headingRef, self.rangeRef, self.rudder, self.throttle))
         # log to file
         self.logSelf(tNow)
     ## Write current state to file

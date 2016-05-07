@@ -16,7 +16,7 @@ import ekf
 ## Conversion factor for (degrees->radians->arc length at mean Earth equatorial radius)
 GPS_D2R_RE = 111318.845
 ## Smoothing factor to use on measured GPS values
-SMOOTH_ALPHA = 0.1
+SMOOTH_ALPHA = 0.25
 
 ## Lowpass filter an input to return a new, smoothed state
 #
@@ -70,10 +70,14 @@ class gps_state():
             # approximate the speed
             h = math.atan2(self.y-ylast,self.x-xlast)
             self.hdg = lowpass(self.hdg,h,SMOOTH_ALPHA)
-            if dt > 0:
-                vel = math.sqrt( math.pow(self.x-xlast,2.0)+math.pow(self.y-ylast,2.0) )/dt
-            else:
-                vel = 0.0
+            if vel > 20.0:
+                # compute new velocity from difference
+                if dt > 0:
+                    vel = math.sqrt( math.pow(self.x-xlast,2.0)+math.pow(self.y-ylast,2.0) )/dt
+                else:
+                    vel = 0.0
+                if vel > 20.0:
+                    vel = 0.0
             self.v = lowpass(self.v,vel,SMOOTH_ALPHA)
         else:
             self.lon = (1.0e-7*float(lon_int))
@@ -198,6 +202,8 @@ class xbee_bridge_state():
         self.filterState[1] = self.gpsState.y
         self.filterState[2] = self.gpsState.v
         self.filterState[3] = self.gpsState.hdg
+        # Debug test print of state
+        #print("%12.7g,%8.4g,%8.4g" % (tNow,self.filterState[2],self.filterState[3]))
         # reset the filter if things look bad
         # are the covariance diagonals zero or nan?
         if (self.EKF.Pk[0,0]==0.0) or (self.EKF.Pk[1,1]==0.0) or (self.EKF.Pk[2,2]==0.0) or (self.EKF.Pk[3,3]==0.0) or (self.EKF.Pk[4,4]==0.0) or (self.EKF.Pk[5,5]==0.0) or (np.any(np.isnan(np.diag(self.EKF.Pk)))):
