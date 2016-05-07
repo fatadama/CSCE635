@@ -105,7 +105,7 @@ void commParser::misc_tasks(uint32_t millis,emilyStatus st){ // updates the valu
     if (next_stream_time_millis[k] <= millis){
       if (k == 0){ // GPS stream, send current GPS
         next_stream_time_millis[k] = millis + STREAM_PERIOD_GPS;
-        if (st.gpsNow.init){
+        if (st.gpsNow.new_value){
           // send GPS if initialized
           if (esp_pack_gps_pos(&send_buffer[send_buffer_counter],st.gpsNow.lon,
             st.gpsNow.lat,st.gpsNow.t,st.gpsNow.v,st.gpsNow.hdg,(uint8_t)st.gpsNow.health) > 0)
