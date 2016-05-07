@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,10 +30,13 @@ int16_t emilyGPS::parseBytes(char ch,uint32_t millis){
 }
 
 int16_t emilyGPS::parseSentence(){
+  // TODO evaluate Checksum!
   char field[sentenceSize];
   getField(field, 0);
   if (strcmp(field, "$GPRMC") == 0)
   {
+    //DEBUG HACK: call checksum
+    gpsChecksum()
     // check if this is a valid message
     getField(field,2);
     if (strcmp(field,"A") != 0){
@@ -82,6 +87,25 @@ int16_t emilyGPS::parseSentence(){
   else{
     return -1;
   }
+}
+
+int16_t emilyGPS::gpsChecksum(){
+  // parse the sentence until we see an end byte
+  char chksum = 0;
+  int k;
+  for(int k = 1;k<sentenceSize;k++){
+    if (sentence[k]=='*'){
+      break;
+    }
+    // checksum byte is XOR of all bytes between the header '$' and the end of message '*'
+    chksum = char(chksum^sentence[k]);
+  }
+  // sentence[k+1,k+2] are the hex representation of the checksum... I think
+  Serial.print("Compute checksum: ");
+  Serial.print(String(chksum,HEX));
+  Serial.print("Checksum bytes: ");
+  Serial.print(sentence[k+1]);
+  Serial.print(sentence[k+2]);
 }
 
 void emilyGPS::getField(char* buffer, int index)

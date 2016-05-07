@@ -31,14 +31,6 @@ SoftwareSerial gpsSerial(8, 7); // RX, TX pins
 
 /** serial port name to use: Serial is USB, Serial1 is the RX and TX pins */
 #define COMM_SERIAL Serial1
-/** rudder signal pin output */
-#define RUDDER_PIN 9
-/** throttle signal pin output */
-#define THROTTLE_PIN 10
-/** Rudder servo object */
-ServoTimer2 rudderServo;
-/** Throttle servo object */
-ServoTimer2 throttleServo;
 
 /** global status object */
 emilyStatus stat;
@@ -46,18 +38,12 @@ emilyStatus stat;
 emilyGPS GPS;
 /** communications parser object */
 commParser comm;
-/** Control object */
-emilyControl control;
 
 uint32_t millis_next = 0;
 uint32_t millis_now = 0;
 uint32_t serial_millis_next = 0;
 // Variable for parsing XBee bytes
 uint8_t serialByte;
-/** Rudder signal variable */
-uint16_t pwm_rudder;
-/** Throttle signal variable */
-uint16_t pwm_throttle;
 /** GPS parsing char */
 char gpsChar;
 
@@ -130,11 +116,6 @@ void setup()
   }
   // set target time for reading serial
   serial_millis_next = millis() + (SERIAL_PERIOD_MICROS/1000);
-  // initialize servo pins out
-  //pinMode(RUDDER_PIN,OUTPUT);
-  rudderServo.attach(RUDDER_PIN,1000,2000);
-  //pinMode(THROTTLE_PIN,OUTPUT);
-  throttleServo.attach(THROTTLE_PIN,1000,2000);
 }
 
 void loop()
@@ -166,32 +147,8 @@ void loop()
   GPS.misc_tasks();
   GPS.sync(&stat);
   // update comm status
-  //comm.update_status(&stat);
   comm.misc_tasks(millis_now,stat);
   comm.sync(&stat);
-  // copy comm status to main status
-  control.misc_tasks(millis_now,stat);
-
-  // read the control values and write them
-  if(control.new_control() > 0){
-    // read from control
-    control.get_pwm(&pwm_rudder,&pwm_throttle);
-    if(DEBUGGING){
-      Serial.print("CTRL R:");
-      Serial.print(pwm_rudder);
-      Serial.print(" T:");
-      Serial.print(pwm_throttle);
-      Serial.print(" M:");
-      Serial.print(stat.control_mode);
-      Serial.print(" S:");
-      Serial.print(stat.comm_status);
-      Serial.print("\n");
-    }
-    // write out rudder
-    rudderServo.write(pwm_rudder);
-    // write out throttle
-    throttleServo.write(pwm_throttle);
-  }
 
   // send any bytes in the transmit buffer
   while(comm.bytes_to_send() > 0){
@@ -218,19 +175,6 @@ void loop()
       Serial.print(y);
       Serial.print(" NEWCMD:");
       Serial.print(stat.gpsCmd.is_new());
-      Serial.print("\n");
-    }
-    if (stat.gpsCmd.is_new()){
-      stat.gpsCmd.get(&x,&y);
-      Serial.print("GPSCMD ");
-      Serial.print("Lat:");
-      Serial.print(stat.gpsCmd.lat);
-      Serial.print(" Lon:");
-      Serial.print(stat.gpsCmd.lon);
-      Serial.print(" X:");
-      Serial.print(x);
-      Serial.print(" Y:");
-      Serial.print(y);
       Serial.print("\n");
     }
   }

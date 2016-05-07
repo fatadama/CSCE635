@@ -25,6 +25,7 @@ public:
     */
   int16_t parseBytes(char ch,uint32_t millis);
   int16_t parseSentence();/** Parse a sentence from the GPS. */
+  int16_t gpsChecksum();/*!< Evaluate the checksum of a current GPS sentence */
   void misc_tasks(uint32_t millis);/** Determine if the GPS lock has timed out */
   /** Send the command to set the baud rate. Returns a string
    *
