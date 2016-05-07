@@ -63,10 +63,12 @@ class gps_state():
             ylast = self.y
             self.lon = lowpass(self.lon, 1.0e-7*float(lon_int), SMOOTH_ALPHA)
             self.lat = lowpass(self.lat, 1.0e-7*float(lat_int), SMOOTH_ALPHA)
-            #self.v = lowpass(self.v,vel,SMOOTH_ALPHA)
-            #self.hdg = lowpass(self.hdg,h,SMOOTH_ALPHA)
+            # use GPS speed and heading directly
+            self.v = vel
+            self.hdg = h
             # update the X Y values
             self.latLon2XY()
+            '''
             # approximate the speed
             h = math.atan2(self.y-ylast,self.x-xlast)
             self.hdg = lowpass(self.hdg,h,SMOOTH_ALPHA)
@@ -79,6 +81,7 @@ class gps_state():
                 if vel > 20.0:
                     vel = 0.0
             self.v = lowpass(self.v,vel,SMOOTH_ALPHA)
+            '''
         else:
             self.lon = (1.0e-7*float(lon_int))
             self.lat = (1.0e-7*float(lat_int))
