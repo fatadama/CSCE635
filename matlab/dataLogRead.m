@@ -14,20 +14,20 @@ knots2ms = 0.514444;
 
 % logs with waypoint naviagation
 %folder = '../python/xbee_bridge/20160507_141654/'; % only one trial here
-%folder = '../python/xbee_bridge/20160507_141917/'; % three trials in this one
+folder = '../python/xbee_bridge/20160507_141917/'; % 4x trials in this one, clearly overcorrecting in PID
 %folder = '../python/xbee_bridge/20160507_143130/'; % one trial here
-%folder = '../python/xbee_bridge/20160507_143254/'; % one trial
-%folder = '../python/xbee_bridge/20160507_143407/'; % one trial
-%folder = '../python/xbee_bridge/20160507_143717/'; % one trial, looks quite good
+%folder = '../python/xbee_bridge/20160507_143254/'; % one trial, does not complete
+%folder = '../python/xbee_bridge/20160507_143407/'; % 2x trial, looks OK but overcorrects
+%folder = '../python/xbee_bridge/20160507_143717/'; % 2x trial, looks good but maybe underdamped alightly 
 %folder = '../python/xbee_bridge/20160507_143924/'; % one trial, looks good. I think this is the one where I sent it back into auto mode and it beached itself
-folder = '../python/xbee_bridge/20160507_144045/'; % one trial, looks good
-%folder = '../python/xbee_bridge/20160507_144251/'; % one trial, meandering but looks OK
-%folder = '../python/xbee_bridge/20160507_144625/';% one trial, meandering but OK
+%folder = '../python/xbee_bridge/20160507_144045/'; % one trial, looks good
+%folder = '../python/xbee_bridge/20160507_144251/'; % 2x trial, underdamped but gets there
+%folder = '../python/xbee_bridge/20160507_144625/';% 2x trial, definitely underdamped but gets there
 %folder = '../python/xbee_bridge/20160507_144856/';% one trial, meandering not good
 %folder = '../python/xbee_bridge/20160507_145007/';% one trial, didn't get there
 %folder = '../python/xbee_bridge/20160507_145139/';% one trial, looks OK
 
-% parse name
+% parse name for handling some earlier files with errors
 foldermonth = str2num(folder(27:28));
 folderday = str2num(folder(29:30));
 folderhour = str2num(folder(32:33));
@@ -100,11 +100,12 @@ grid on;
 
 %find breaks in the time history of controlObj(:,1)
 inbr = find(abs(diff(controlObj(:,1)) > 2.0));
-if isempty (inbr)
-    inbr = length(controlObj);
-end
+inbr = [inbr;length(controlObj)];
 
 kcount = 2;
+
+% target figure position
+figpos = [100 300 1500 675];
 
 for kcount = 1:length(inbr)
     %array of indices to use
@@ -124,10 +125,15 @@ for kcount = 1:length(inbr)
     
     subplot(231);
     plot(controlObj(inu,3),controlObj(inu,2),'r-','linewidth',2);
+    hold on;
+    plot(controlObj(inu(1),3),controlObj(inu(1),2),'ro','linewidth',2,'markersize',6);
+    %quiver(controlObj(inu(1),3),controlObj(inu(1),2),sin(gpsi(1)),cos(gpsi(1)),10,'linewidth',2);
+    %quiver(controlObj(inu,3),controlObj(inu,2),sin(gpsi),cos(gpsi),'linewidth',2);
+    %hold on;
     % draw where the target should be
     thet = linspace(-pi,pi,100)';
     circ = 5.0.*[cos(thet) sin(thet)];
-    hold on;
+    %hold on;
     plot(circ(:,1),circ(:,2),'k--');
     xlabel('Y (m)');
     ylabel('X (m)');
@@ -146,7 +152,7 @@ for kcount = 1:length(inbr)
     title( sprintf('Trial %d',kcount));
     
     subplot(233);
-    plot(controlObj(inu,1),controlObj(inu,2:3),'linewidth',2);
+    plot(controlObj(inu,1),controlObj(inu,2:3),'.','linewidth',2);
     ylabel('X-Y(m)');
     legend('X','Y');
     grid on;
@@ -184,5 +190,7 @@ for kcount = 1:length(inbr)
 %     set(gca,'xlim',[controlObj(inu(1),1) controlObj(inu(end),1)]);
 %     grid on;
 %     ylabel('Throttle command (normalized)');
+
+    set(gcf,'position',figpos);
 
 end
