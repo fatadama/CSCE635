@@ -8,11 +8,8 @@
  */
 //#include <Arduino.h>
 #include <SoftwareSerial.h>
-#include <ServoTimer2.h>
 #include "emilyStatus.h"
 #include "emilyGPS.h"
-#include "commParser.h"
-#include "emilyControl.h"
 
 /** serial object for reading GPS */
 SoftwareSerial gpsSerial(8, 7); // RX, TX pins
@@ -29,15 +26,10 @@ SoftwareSerial gpsSerial(8, 7); // RX, TX pins
 /** Debugging serial baud rate */
 #define DEBUG_SERIAL_BAUD 9600
 
-/** serial port name to use: Serial is USB, Serial1 is the RX and TX pins */
-#define COMM_SERIAL Serial1
-
 /** global status object */
 emilyStatus stat;
 /** GPS object */
 emilyGPS GPS;
-/** communications parser object */
-commParser comm;
 
 uint32_t millis_next = 0;
 uint32_t millis_now = 0;
@@ -71,7 +63,16 @@ void configure_gps(int baud, int sample){
   //reconnect to GPS at the faster baud rate
   gpsSerial.begin(GPS_BAUD_RATE);
   delay(5000);
-  // pack GPS message for faster sampling - 10 Hz target
+  //pack GPS message to send only RMC GPS messages
+  len = GPS.send_command_configure_nmea_message(buffer,0,0,0,0,1,0,0);//should the value be zero??
+  buffer[len] = 0;
+  // write one byte at a time
+  for(int j = 0;j<len;j++){
+    gpsSerial.write(buffer[j]);
+    delay(0.05);
+  }
+  delay(1000);
+  // pack GPS message for faster sampling - 10 Hz target  
   len = GPS.send_command_configure_position_rate(buffer,sample);
   buffer[len] = 0;
   // write one byte at a time
@@ -88,8 +89,6 @@ void setup()
     Serial.begin(DEBUG_SERIAL_BAUD);
     Serial.print("Initialized emilyGPS_test\n");
   }
-  // open XBee serial port
-  COMM_SERIAL.begin(XBEE_SERIAL_BAUD);
   // set the GPS baud rate and sample rate
   switch (GPS_BAUD_RATE){
     case 38400:
@@ -121,39 +120,17 @@ void setup()
 void loop()
 {
   millis_now = millis();
-  // update the comm status
-  // see if it's time to READ XBee serial
-  if( millis_now >= serial_millis_next ){
-    serial_millis_next += (SERIAL_PERIOD_MICROS/1000);
-    // check if serial is available
-    if (COMM_SERIAL.peek() > -1){
-      while(COMM_SERIAL.available()){ // not sure if we should run as fast as available or not
-        // read while available
-        serialByte = COMM_SERIAL.read();
-        // parse the message
-        comm.newBytes(&serialByte,1,millis_now);
-      }
-    }
-  }
-  // copy comm status to main status
-  comm.sync_after_receive(&stat);
   /** See if new GPS available */
   if (gpsSerial.available())
   {
     gpsChar = gpsSerial.read();
-    GPS.parseBytes(gpsChar);
+    if(DEBUGGING)
+      Serial.print(gpsChar);
+    GPS.parseBytes(gpsChar,millis_now);
   }
   // call periodic functions
-  GPS.misc_tasks();
+  GPS.misc_tasks(millis_now);
   GPS.sync(&stat);
-  // update comm status
-  comm.misc_tasks(millis_now,stat);
-  comm.sync(&stat);
-
-  // send any bytes in the transmit buffer
-  while(comm.bytes_to_send() > 0){
-    COMM_SERIAL.write( comm.get_next_byte() );
-  }
 
   // test GPS print
   if(DEBUGGING) {

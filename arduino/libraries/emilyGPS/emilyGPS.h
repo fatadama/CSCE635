@@ -60,6 +60,7 @@ private:
   gpsData gpsNow;/*!< GPS object to store new values in */
   gpsData gpsLast;/*!< GPS object to store the previous value of GPS */
   uint32_t time_last_millis;/*!< Last time of good GPS message, in milliseconds (system time) */
+  int16_t last_checksum;/*!< The value returned by the last call to gpsChecksum. 0 if the checksum failed. */
 };
 
 /** Convert a GPS character field for longitude or latitude in standard format to a int32_t format in (10^-7 degrees)

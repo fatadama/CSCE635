@@ -22,11 +22,13 @@ double deg2m(int32_t);/*!< Convert a double in (10^-7 degrees) to arc length in 
  *
  * Meanings: HEALTHY less than GPS_TIMEOUT_PERIOD_MS milliseconds since last message (defined in emilyGPS.h)
  *           LOST more than GPS_TIMEOUT_PERIOD_MS since last message
+ *           BAD_CHECKSUM last call to gpsCHecksum returned 0
  */
 
 enum gpsStatus{
   GPS_STATUS_HEALTHY=0,
-  GPS_STATUS_LOST=1
+  GPS_STATUS_LOST=1,
+  GPS_BAD_CHECKSUM=2
 };
 
 /** Enumerated type for the communication health.

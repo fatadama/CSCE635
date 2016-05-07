@@ -36,7 +36,10 @@ int16_t emilyGPS::parseSentence(){
   if (strcmp(field, "$GPRMC") == 0)
   {
     //DEBUG HACK: call checksum
-    gpsChecksum()
+    last_checksum = gpsChecksum();
+    if (!last_checksum){
+      return -3;
+    }
     // check if this is a valid message
     getField(field,2);
     if (strcmp(field,"A") != 0){
@@ -94,18 +97,29 @@ int16_t emilyGPS::gpsChecksum(){
   char chksum = 0;
   int k;
   for(int k = 1;k<sentenceSize;k++){
+    // watch for the terminal character - don't include it in the checksum
     if (sentence[k]=='*'){
+      // do the checksum operation then quit
+      // sentence[k+1,k+2] are the 2-byte hex representation of the checksum as a string
+      /*
+      Serial.print("Compute checksum: ");
+      Serial.print(String(chksum,HEX));
+      Serial.print("Checksum bytes: ");
+      Serial.print(sentence[k+1]);
+      Serial.print(sentence[k+2]);
+      Serial.print("\n");
+      */
+      // append 0 to string, so it will parse only the two-byte checksum
+      sentence[k+3] = 0;
+      // if checksum, return
+      String checkstring = String(chksum,HEX);
+      // return the boolean comparison
+      return checkstring.equalsIgnoreCase(String(&sentence[k+1]));
       break;
     }
     // checksum byte is XOR of all bytes between the header '$' and the end of message '*'
     chksum = char(chksum^sentence[k]);
   }
-  // sentence[k+1,k+2] are the hex representation of the checksum... I think
-  Serial.print("Compute checksum: ");
-  Serial.print(String(chksum,HEX));
-  Serial.print("Checksum bytes: ");
-  Serial.print(sentence[k+1]);
-  Serial.print(sentence[k+2]);
 }
 
 void emilyGPS::getField(char* buffer, int index)
@@ -131,11 +145,14 @@ void emilyGPS::getField(char* buffer, int index)
 }
 
 void emilyGPS::misc_tasks(uint32_t millis){
-  if (millis - time_last_millis > GPS_TIMEOUT_PERIOD_MS){
+  if ((millis - time_last_millis) > GPS_TIMEOUT_PERIOD_MS){
     // set a status member of the gpsNow class object
     gpsNow.health = GPS_STATUS_LOST;
   }
   else{
+    if(last_checksum==0){
+      gpsNow.health = GPS_BAD_CHECKSUM;
+    }
     gpsNow.health = GPS_STATUS_HEALTHY;
   }
 }
@@ -238,9 +255,8 @@ void emilyGPS::sync(emilyStatus*status){
     status->gpsNow.new_value=1;
     status->gpsNow.init=1;
     gpsNow.new_value=0;
-    // HACK: call get() to make the gps data no longer flag as new
-    //float x,y;
-    //gpsNow.get(&x,&y);
+    // copy the health
+    status->gpsNow.health = gpsNow.health;
   }
   // set the status of the global structure
   status->gpsNow.health = gpsNow.health;
