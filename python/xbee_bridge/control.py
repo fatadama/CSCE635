@@ -48,6 +48,14 @@ class control():
         self.rudder = 0.0
         ## target throttle setting
         self.throttle = 0.0
+        ## time for the fixed-action pattern for determining heading
+        self.headingTime=0.0
+        ## booleam associated with the heading fixed action pattern
+        self.headingMoveBool=False
+        ## State at the start of the heading fixed-action pattern
+        self.headingMoveStateStart=np.zeros(4)
+        ## State at the start of the heading fixed-action pattern
+        self.headingMoveStateEnd=np.zeros(4)
         ## PID object for heading commands
         self.headingPid = PIDclass(Kp,Ki,Kd,logDir=logDir,name='hdg',umin=-1.0,umax=1.0)
         ## log object
@@ -75,14 +83,23 @@ class control():
         return
     ## Update the control value based on the current state
     # @param[in] tNow the current clock time (seconds)
+    # @param[out] Reuturn 0 nominally. Return 1 if we are the waypoint. Return -1 if we just finished the fixed-action pattern.
     def update(self,tNow):
+        # if in headingMove mode, perform that action
+        if self.headingMoveBool>0:
+            self.headingMoveAction(tNow)
+            # log to file
+            self.logSelf(tNow)
+            if self.headingMoveBool==0:
+                return -1
+            return 0
         # evaluate range to target. Do nothing if close enough
         if self.rangeRef < rangeThreshold:
             self.rudder = 0.0
             self.throttle = 0.0
             # log to file
             self.logSelf(tNow)
-            return
+            return 1
         # else, we're far from target: set the throttle on so we can figure out our speed
         self.throttle = self.throttleWhileTurning
 
@@ -103,6 +120,7 @@ class control():
             print("%13s,%8.6f,%8.6f,%6.4f,%6.4f" % ("PID MODE",self.headingRef, self.rangeRef, self.rudder, self.throttle))
         # log to file
         self.logSelf(tNow)
+        return 0
     ## Write current state to file
     #
     # @param[in] tNow the current time
@@ -113,6 +131,38 @@ class control():
     ## Reset the PID object
     def reset(self):
         self.headingPid.reset()
+    ## Called by main loop to enable the fixed-action pattern to determine heading
+    #
+    #@param[in] tNow current system time
+    #@param[in] boolIn Boolean value
+    def headingMove(self,tNow,boolIn):
+        self.headingMoveBool=boolIn
+        if boolIn>0:
+            # record the current position
+            self.headingMoveStateStart[0] = self.x
+            self.headingMoveStateStart[1] = self.y
+            self.headingMoveStateStart[2] = self.v
+            self.headingMoveStateStart[3] = self.psi
+            # set the initial time
+            print("Started fixed-action pattern")
+            self.headingTime=tNow
+    ## Perform the fixed-action pattern to get the heading
+    def headingMoveAction(self,tNow):
+        # throttle on
+        self.throttle=self.throttleWhileCruising
+        # rudder zero
+        self.rudder=0.0
+        # timeout is 5 Secs
+        if tNow - self.headingTime >= 5.0:
+            # record the current position
+            self.headingMoveStateEnd[0] = self.x
+            self.headingMoveStateEnd[1] = self.y
+            self.headingMoveStateEnd[2] = self.v
+            self.headingMoveStateEnd[3] = self.psi
+            # unset the flag
+            self.headingMoveBool=False
+            print("End fixed-action pattern")
+
 
 ## Function used to compute the error between state and reference in the default case
 # subtracts the reference from the state

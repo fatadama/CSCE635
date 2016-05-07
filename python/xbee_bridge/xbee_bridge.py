@@ -130,7 +130,15 @@ class bridgeProcess():
                 # update the reference to the control object
                 self.control.vectorRef(self.syntheticWaypoint.range,self.syntheticWaypoint.bearing)
             # call the control object with the current state
-            self.control.update(tNow)
+            ret = self.control.update(tNow)
+            if ret < 0:
+                # create synthetic waypoint from current heading
+                self.syntheticWaypoint.create(self.dw_radius,self.dw_angle,self.state.filterState[0],self.state.filterState[1],self.state.filterState[3])
+                print("Created waypoint at %g, %g" % (self.syntheticWaypoint.x,self.syntheticWaypoint.y))
+            if ret > 0:
+                # set control mode to teleop
+                self.state.control_mode = 0
+                print("Goal reached: return to teleoperation mode!")
             self.state.rudderCmd=self.control.rudder
             self.state.throttleCmd=self.control.throttle
         self.txBuffer+=esp.pack_control(self.state.rudderCmd,self.state.throttleCmd)
@@ -162,6 +170,8 @@ class bridgeProcess():
                 if self.state.control_mode == 0:
                     # reset the PID object
                     self.control.reset()
+                    # enable the fixed-action pattern to determine heading in the control object
+                    self.control.headingMove(tNow,True)
                     # set the control_mode flag
                     self.state.control_mode = 1
                 elif self.state.control_mode == 1:
@@ -169,7 +179,10 @@ class bridgeProcess():
                 print("Toggle control mode")
                 self.joy.control_mode = False
             if self.joy.new_waypoint:
+                # HACK do nothing
+                self.joy.new_waypoint = False
                 # if throttle is high enough, WAIT
+                '''
                 if self.state.throttleAvg <= 0.25:
                     print("Going too slow to create waypoint, WAIT")
                     self.syntheticWaypoint.create(10.0,0.0,self.state.filterState[0],self.state.filterState[1],self.state.filterState[3])
@@ -178,6 +191,7 @@ class bridgeProcess():
                     self.joy.new_waypoint = False
                     self.syntheticWaypoint.create(self.dw_radius,self.dw_angle,self.state.filterState[0],self.state.filterState[1],self.state.filterState[3])
                     print("Created waypoint at %g, %g" % (self.syntheticWaypoint.x,self.syntheticWaypoint.y))
+                '''
         # Read IPC
         #   Update control_mode
         #   If control_mode == pfields
