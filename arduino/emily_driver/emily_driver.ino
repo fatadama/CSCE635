@@ -218,7 +218,6 @@ void loop()
   // test GPS print
   if(DEBUGGING) {
     if (stat.gpsNow.is_new()){
-      stat.gpsNow.get(&x,&y);
       Serial.print("GPS Time:");
       Serial.print(stat.gpsNow.t);
       Serial.print(" Lat:");
@@ -229,12 +228,13 @@ void loop()
       Serial.print(stat.gpsNow.v);
       Serial.print(" H:");
       Serial.print(stat.gpsNow.hdg);
+      Serial.print(" NEWCMD:");
+      Serial.print(stat.gpsCmd.is_new());
+      stat.gpsNow.get(&x,&y);
       Serial.print(" X:");
       Serial.print(x);
       Serial.print(" Y:");
       Serial.print(y);
-      Serial.print(" NEWCMD:");
-      Serial.print(stat.gpsCmd.is_new());
       Serial.print("\n");
     }
     if (stat.gpsCmd.is_new()){

@@ -212,6 +212,7 @@ void emilyGPS::sync(emilyStatus*status){
     status->gpsNow.t=gpsNow.t;
     // HACK use public new_value flags
     status->gpsNow.new_value=1;
+    status->gpsNow.init=1;
     gpsNow.new_value=0;
     // HACK: call get() to make the gps data no longer flag as new
     //float x,y;
