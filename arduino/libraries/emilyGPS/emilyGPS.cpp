@@ -243,6 +243,8 @@ uint8_t emilyGPS::send_command_restart_cold(uint8_t*buffer){
 
 void emilyGPS::sync(emilyStatus*status){
   if (gpsNow.is_new()){
+    // copy the health
+    status->gpsNow.health = gpsNow.health;
     // copy the lat/lon and other data to the global structure
     status->gpsNow.lat = gpsNow.lat;
     status->gpsNow.lon = gpsNow.lon;
@@ -255,8 +257,6 @@ void emilyGPS::sync(emilyStatus*status){
     status->gpsNow.new_value=1;
     status->gpsNow.init=1;
     gpsNow.new_value=0;
-    // copy the health
-    status->gpsNow.health = gpsNow.health;
   }
   // set the status of the global structure
   status->gpsNow.health = gpsNow.health;

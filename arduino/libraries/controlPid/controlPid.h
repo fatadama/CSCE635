@@ -2,7 +2,7 @@
 #define __CONTROLPID__H__DEFINED__
 
 #include <stdint.h>
-#include "lowPassFilter.h"
+#include "../lowPassFilter/lowPassFilter.h"
 
 #define INTEGRAL_MAX 0.1
 

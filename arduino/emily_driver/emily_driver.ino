@@ -9,6 +9,10 @@
 #include <Arduino.h>
 #include <SoftwareSerial.h>
 #include <Servo.h>
+#include "ESP.h"
+#include "lowPassFilter.h"
+#include "controlPid.h"
+
 #include "emilyStatus.h"
 #include "emilyGPS.h"
 #include "commParser.h"

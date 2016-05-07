@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include "emilyStatus.h"
-#include "ESP.h"
+#include "../ESP/ESP.h"
 
 /** After this many milliseconds without receiving a message, set comm mode to WARNING */
 #define TIMEOUT_WARNING_MILLIS 1000

@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 #include "emilyStatus.h"
-#include "controlPid.h"
-#include "lowPassFilter.h"
+#include "../controlPid/controlPid.h"
+#include "../lowPassFilter/lowPassFilter.h"
 
 /** Target automatic control rate execution in Hz */
 #define EMILYCONTROL_RATE_MILLIS 100
