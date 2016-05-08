@@ -68,20 +68,6 @@ class gps_state():
             self.hdg = h
             # update the X Y values
             self.latLon2XY()
-            '''
-            # approximate the speed
-            h = math.atan2(self.y-ylast,self.x-xlast)
-            self.hdg = lowpass(self.hdg,h,SMOOTH_ALPHA)
-            if vel > 20.0:
-                # compute new velocity from difference
-                if dt > 0:
-                    vel = math.sqrt( math.pow(self.x-xlast,2.0)+math.pow(self.y-ylast,2.0) )/dt
-                else:
-                    vel = 0.0
-                if vel > 20.0:
-                    vel = 0.0
-            self.v = lowpass(self.v,vel,SMOOTH_ALPHA)
-            '''
         else:
             self.lon = (1.0e-7*float(lon_int))
             self.lat = (1.0e-7*float(lat_int))

@@ -32,6 +32,8 @@ from xbee_bridge_state import xbee_bridge_state
 import joystick
 # import the control class
 import control
+# import the interprocess communication object
+import ipcPacker
 
 ## Class object for the XBee bridge
 #
@@ -77,6 +79,8 @@ class bridgeProcess():
         self.new_data = False
         ## buffer of bytes to write to XBee; clear whenever written
         self.txBuffer = bytes()
+        ## Object for interprocess communications
+        self.ipc = ipcPacker.nanomsgTalker()
         ## control object for computing control
         self.control = control.control(logDir=foldername,Kp=Kp,Kd=Kd,Ki=Ki,turnThrottle=turnThrottle,cruiseThrottle=cruiseThrottle)
         ## parser object for the serial protocol. Pass the log folder to create message logs
@@ -131,6 +135,8 @@ class bridgeProcess():
             if ret < 0:
                 # create synthetic waypoint from current heading
                 self.syntheticWaypoint.create(self.dw_radius,self.dw_angle,self.state.filterState[0],self.state.filterState[1],self.state.filterState[3])
+                # create synthetic waypoint at the home lat/lon
+                self.ipc.writeTarget(tNow,self.state.gpsState.lat_home,self.state.gpsState.lon_home,0.0)
                 print("Created waypoint at %g, %g" % (self.syntheticWaypoint.x,self.syntheticWaypoint.y))
             if ret > 0:
                 # set control mode to teleop
@@ -179,17 +185,8 @@ class bridgeProcess():
                 # HACK do nothing
                 self.joy.new_waypoint = False
                 # if throttle is high enough, WAIT
-                '''
-                if self.state.throttleAvg <= 0.25:
-                    print("Going too slow to create waypoint, WAIT")
-                    self.syntheticWaypoint.create(10.0,0.0,self.state.filterState[0],self.state.filterState[1],self.state.filterState[3])
-                else:
-                    # if we're going fast enough, set the new waypoint:
-                    self.joy.new_waypoint = False
-                    self.syntheticWaypoint.create(self.dw_radius,self.dw_angle,self.state.filterState[0],self.state.filterState[1],self.state.filterState[3])
-                    print("Created waypoint at %g, %g" % (self.syntheticWaypoint.x,self.syntheticWaypoint.y))
-                '''
         # Read IPC
+        self.ipc.readSocks()
         #   Update control_mode
         #   If control_mode == pfields
         #       Update target vector
@@ -197,7 +194,8 @@ class bridgeProcess():
         if self.new_data:
             # update the state to the control object
             self.control.updateState(self.state.filterState)
-            # TODO Write GPS to IPC
+            # Write GPS to IPC
+            self.ipc.writeSocks(tNow,state.gpsState.lat,state.gpsState.lon,state.gpsState.v,state.gpsState.hdg)
             # set flag to false
             self.new_data = False
         return
