@@ -1,18 +1,22 @@
 #ifndef __MSGPARSER__H__DEFINED__
 #define __MSGPARSER__H__DEFINED__
 
+/** @file Header only library for simple nanomsg parsing */
+
 #include <iostream>
 #include <stdio.h>
 #include <cstring>
 //#include <windows.h>
 
 // Message definitions
-/** A mode message - swap teleoperation and pfields */
+/** A mode message - swap teleoperation and pfields: msgid = mode  */
 #define MSG_MODE 1
-/** An EMILY position and pose message */
+/** An EMILY position and pose message: msgid = egps  */
 #define MSG_EMILY_GPS 2
-/** A Target position and pose message */
+/** A Target position and pose message: msgid = tgps  */
 #define MSG_TARGET_GPS 4
+/** A reference speed and heading message: msgid = rspd */
+#define MSG_SPEED_REF 8
 
 inline int get_msg_id(char*msg){
   char msgid[16];
@@ -27,6 +31,10 @@ inline int get_msg_id(char*msg){
   if (!_strcmpi(msgid,"tgps")){
     return MSG_TARGET_GPS;
   }
+  if (!_strcmpi(msgid, "rspd")) {
+	  return MSG_SPEED_REF;
+  }
+  return -1;
 }
 
 /** Unpack a MODE message
@@ -54,6 +62,14 @@ inline void parse_msg_target_gps(char*msg, double*msgDoubles) {
 	sscanf(&msg[5], "%lf,%lf,%lf,%lf", &msgDoubles[0], &msgDoubles[1], &msgDoubles[2], &msgDoubles[3]);
 }
 
+/** Unpack an SPEED_REF message
+*
+* Message format: <rspd,(double)time(sec),(double)v(normalized),(double)heading(radians)>
+*/
+inline void parse_msg_speed_ref(char*msg, double*msgDoubles) {
+	sscanf(&msg[5], "%lf,%lf,%lf", &msgDoubles[0], &msgDoubles[1], &msgDoubles[2]);
+}
+
 /** Parse a message buffer; extract the message ID and contents into an integer and double array
  *
  * @param[in] msg: the raw message from nanomsg
@@ -76,6 +92,9 @@ inline void parse_msg(char*msg,int*msgid,int*msgInts,double*msgDoubles){
     case MSG_TARGET_GPS:
       parse_msg_target_gps(msg,msgDoubles);
       break;
+	case MSG_SPEED_REF:
+		parse_msg_speed_ref(msg, msgDoubles);
+		break;
   }
   return;
 }
