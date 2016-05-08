@@ -17,6 +17,8 @@
 #define MSG_TARGET_GPS 4
 /** A reference speed and heading message: msgid = rspd */
 #define MSG_SPEED_REF 8
+/** Acknowledgement messgae: msgid = ackd */
+#define MSG_ACK 16
 
 inline int get_msg_id(char*msg){
   char msgid[16];
@@ -33,6 +35,9 @@ inline int get_msg_id(char*msg){
   }
   if (!_strcmpi(msgid, "rspd")) {
 	  return MSG_SPEED_REF;
+  }
+  if (!_strcmpi(msgid, "ackd")) {
+	  return MSG_ACK;
   }
   return -1;
 }

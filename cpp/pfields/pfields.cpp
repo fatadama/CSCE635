@@ -165,7 +165,7 @@ void pfields(int profile, double goal_loc_x, double goal_loc_y, double X, double
 	fout[1] = V;
 }
 
-double robot_control(double PFIELDS[], double goal_loc_x, double goal_loc_y, double X, double Y, double emily_heading, double pfield_parameters[])
+void robot_control(double PFIELDS[], double goal_loc_x, double goal_loc_y, double X, double Y, double emily_heading, double pfield_parameters[], double * output)
 {
 	using namespace std;
 	// SETTING VARIABLES
@@ -182,6 +182,7 @@ double robot_control(double PFIELDS[], double goal_loc_x, double goal_loc_y, dou
 
 	int MP_TAN = 7; // MAGNITUDE PROFILE OF TANGENTIAL FIELD
 	int MP_ATT = 8; // MAGNITUDE PROFILE OF ATTRACTIVE FIELD
+	//int MP_ATT = 1; // MAGNITUDE PROFILE OF ATTRACTIVE FIELD
 	int MP_BALL = 4; // MAGNITUDE PROFILE OF BALLISTIC FIELD
 	
 	XG = goal_loc_x; // X COORDINATE OF GOAL POSITION
@@ -288,8 +289,14 @@ double robot_control(double PFIELDS[], double goal_loc_x, double goal_loc_y, dou
 		emily_heading = emily_heading + 2 * pi;
 	}
 
-	double EHC = emily_heading;
-	
-	return V;
+	//HACK
+	if (Q < 10.0) {
+		V = V*Q*0.1;
+	}
 
+	//double EHC = emily_heading;
+
+	// set the output
+	output[0] = V;
+	output[1] = -(emily_heading - TH);
 }
