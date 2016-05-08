@@ -1,6 +1,9 @@
 # CSV files (logs)
 *.csv
 
+# settings file logs
+python/*/*/*.ini
+
 # C++ binaries files
 cpp/bin
 

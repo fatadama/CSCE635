@@ -24,7 +24,8 @@ import scipy.integrate
 import struct
 
 # initial GPS state
-# Lake Bryan: 30 deg 42'37.2"N 96 deg 28'06.2"W
+# Lake Bryan: 30.709365, -96.468006
+# goal: 30.709318, -96.468051
 # max length of xbee buffer size
 XBEE_BUFFER_SIZE_MAX = 256
 
@@ -55,8 +56,8 @@ def eqom(x,t,u):
     return dx
 
 ## Gps home position - purely for convenience
-GPS_HOME_LAT = 30.7103333
-GPS_HOME_LON = -93.4683888
+GPS_HOME_LAT = 30.709365
+GPS_HOME_LON = -96.468006
 ## GPS standard error (meters)
 SIGMA_GPS = 1.0
 ## GPS velocity error (m/s)
@@ -68,8 +69,6 @@ class emilyEmulator:
     def __init__(self):
         ## TRUTH state
         self.truthState = gps_state()
-        ## true velocity (m/s) and heading (rads)
-        self.velstate = np.zeros(2)
         ## true actuator states: rudder, throttle
         self.actuators = np.zeros(2)
         ## measured/estimated state
@@ -77,9 +76,12 @@ class emilyEmulator:
         ## serial port parser object
         self.serialParser = esp.espParser()
         # initialize TRUE state: lon (EAST), lat (UP), time, speed, heading (rads)
-        self.truthState.update(GPS_HOME_LON*1.0e7,GPS_HOME_LAT*1.0e7,0.0,0.0,-math.pi*0.25)
+        self.truthState.update(GPS_HOME_LON*1.0e7,GPS_HOME_LAT*1.0e7,0.0,0.0,-math.pi*0.75)
         # initialize measured state
-        self.gpsState.update(GPS_HOME_LON*1.0e7,GPS_HOME_LAT*1.0e7,0.0,0.0,-math.pi*0.25)
+        self.gpsState.update(GPS_HOME_LON*1.0e7,GPS_HOME_LAT*1.0e7,0.0,0.0,-math.pi*0.75)
+        ## true velocity (m/s) and heading (rads)
+        self.velstate = np.zeros(2)
+        self.velstate[1] = self.gpsState.hdg
         ## rudder setting
         self.rudd = 0.0
         # throttle setting
@@ -122,6 +124,8 @@ class emilyEmulator:
             if msg_id == esp.message_heartbeat():
                 (len2,source_id,dest_id,syst) = esp.unpack_heartbeat(msg)
                 print("RECV HEARTBEAT: %i,%i,%f" % (source_id,dest_id,syst))
+                # print our position
+                print("POSITION: X=%10.6g,Y=%10.6g,HDG=%10.6g" % (self.truthState.x,self.truthState.y,self.truthState.hdg))
         return
     def sampleGps(self):
         # sample the current truth state to produce a new GPS state

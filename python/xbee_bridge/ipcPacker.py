@@ -1,5 +1,7 @@
 ## @file Functions and object definitions for packing messages for interprocess communication
 
+import os
+
 ## Nanomsg includes
 from nanomsg_wrappers import set_wrapper_choice, get_default_for_platform
 set_wrapper_choice(os.environ.get('NANOMSG_PY_TEST_WRAPPER',
@@ -17,15 +19,16 @@ MSG_TARGET_GPS = 4
 MSG_SPEED_REF = 8
 
 def ipc_pack_emily_gps(tNow,lat,lon,v,hdg):
-    msg = b'egps,%f,%f,%f,%f,%f' % (time,lat,lon,v,hdg)
+    msg = b'egps,%f,%f,%f,%f,%f' % (tNow,lat,lon,v,hdg)
     return msg
 
 def ipc_pack_target_gps(tNow,lat,lon,hdg):
-    msg = b'tgps,%f,%f,%f,%f' % (time,lat,lon,hdg)
+    msg = b'tgps,%f,%f,%f,%f' % (tNow,lat,lon,hdg)
     return msg
 
 def ipc_parse_msg(msg):
     vals = msg.split(',')
+    #print(vals)
     if vals[0]=='mode':
         t = float(vals[1])
         mode = int(vals[2])
@@ -33,7 +36,7 @@ def ipc_parse_msg(msg):
     if vals[0]=='rspd':
         t = float(vals[1])
         v = float(vals[2])
-        hdg = float(vals[3])
+        hdg = float(vals[3][:-1])
         return(MSG_SPEED_REF,t,v,hdg)
 ## TODO add other parsing later if needed
 
@@ -60,10 +63,10 @@ class nanomsgTalker():
         result = 1
         # empty the buffer
         while result > 0:
-            result, buffer = nn_wrapper.nn_recv(s1, 1)
+            result, buffer = nn_wrapper.nn_recv(self.sock_pfield, 1)
             if result > 0:
                 #handle buffer
-                msgout = ipc_parse_msg(buffer)
+                msgout = ipc_parse_msg(bytes(buffer))
                 if msgout[0]==MSG_SPEED_REF:
                     # set values
                     self.new_ref = True

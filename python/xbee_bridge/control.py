@@ -9,7 +9,7 @@ import math
 # we plan on reading in numpy vectors - do I need to import numpy for this??
 import numpy as np
 
-headingThresholdDegrees = 40.0
+headingThresholdDegrees = 180.0
 headingThreshold = headingThresholdDegrees*math.pi/180.0
 ## range threshold: if closer than this value we assume we're at the target
 rangeThreshold = 5.0
@@ -94,14 +94,21 @@ class control():
                 return -1
             return 0
         # evaluate range to target. Do nothing if close enough
+        '''
         if self.rangeRef < rangeThreshold:
             self.rudder = 0.0
             self.throttle = 0.0
             # log to file
             self.logSelf(tNow)
             return 1
+        '''
         # else, we're far from target: set the throttle on so we can figure out our speed
-        self.throttle = self.throttleWhileTurning
+        #self.throttle = self.throttleWhileTurning
+        # use the reference commanded speed
+        #self.throttle = self.rangeRef
+        # HACK Use a hacky dynamic inversion on the sim model
+        self.throttle = (-3.0*(self.v-8.0*self.rangeRef)-(-.271589))/1.030544
+        print(self.throttle,self.rangeRef)
 
         deltaPsi = headingError(self.psi,self.headingRef)
         if deltaPsi > headingThreshold:# we are more than 20 degrees east of the target
@@ -116,7 +123,7 @@ class control():
             print("%13s,%8.6f,%8.6f,%6.4f,%6.4f" % ("TURNING MODE",self.headingRef, self.rangeRef, self.rudder, self.throttle))
         else:# TODO do PID on heading
             self.rudder = self.headingPid.update(tNow,self.psi,self.headingRef,diffFun=headingError)
-            self.throttle = self.throttleWhileCruising
+            #self.throttle = self.throttleWhileCruising
             print("%13s,%8.6f,%8.6f,%6.4f,%6.4f" % ("PID MODE",self.headingRef, self.rangeRef, self.rudder, self.throttle))
         # log to file
         self.logSelf(tNow)

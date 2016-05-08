@@ -129,19 +129,24 @@ class bridgeProcess():
                 # update the synthetic waypoint with the current state
                 self.syntheticWaypoint.update(tNow,self.state.filterState[0],self.state.filterState[1],self.state.filterState[3])
                 # update the reference to the control object
-                self.control.vectorRef(self.syntheticWaypoint.range,self.syntheticWaypoint.bearing)
+                #self.control.vectorRef(self.syntheticWaypoint.range,self.syntheticWaypoint.bearing)
+                self.control.vectorRef(self.ipc.v_ref,self.ipc.hdg_ref)
             # call the control object with the current state
             ret = self.control.update(tNow)
             if ret < 0:
                 # create synthetic waypoint from current heading
-                self.syntheticWaypoint.create(self.dw_radius,self.dw_angle,self.state.filterState[0],self.state.filterState[1],self.state.filterState[3])
+                #self.syntheticWaypoint.create(self.dw_radius,self.dw_angle,self.state.filterState[0],self.state.filterState[1],self.state.filterState[3])
                 # create synthetic waypoint at the home lat/lon
-                self.ipc.writeTarget(tNow,self.state.gpsState.lat_home,self.state.gpsState.lon_home,0.0)
-                print("Created waypoint at %g, %g" % (self.syntheticWaypoint.x,self.syntheticWaypoint.y))
-            if ret > 0:
+                #self.ipc.writeTarget(tNow,30.709318, -96.468051,-3.0*math.pi/4.0)
+                self.ipc.writeTarget(tNow,30.709218, -96.468151,-3.0*math.pi/4.0)
+                #print("Created waypoint at %g, %g" % (self.syntheticWaypoint.x,self.syntheticWaypoint.y))
+            # check if we're back at home and switch out of mode if we are
+            '''
+            if math.sqrt( math.pow(self.state.filterState[0],2.0)+math.pow(self.state.filterState[1],2.0) ):
                 # set control mode to teleop
                 self.state.control_mode = 0
                 print("Goal reached: return to teleoperation mode!")
+            '''
             self.state.rudderCmd=self.control.rudder
             self.state.throttleCmd=self.control.throttle
         self.txBuffer+=esp.pack_control(self.state.rudderCmd,self.state.throttleCmd)
@@ -195,7 +200,7 @@ class bridgeProcess():
             # update the state to the control object
             self.control.updateState(self.state.filterState)
             # Write GPS to IPC
-            self.ipc.writeSocks(tNow,state.gpsState.lat,state.gpsState.lon,state.gpsState.v,state.gpsState.hdg)
+            self.ipc.writeSocks(tNow,self.state.gpsState.lat,self.state.gpsState.lon,self.state.gpsState.v,self.state.gpsState.hdg)
             # set flag to false
             self.new_data = False
         return
