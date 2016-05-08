@@ -12,20 +12,20 @@ knots2ms = 0.514444;
 %folder = '../python/xbee_bridge/20160506_094356/';
 %folder = '../python/xbee_bridge/20160430_Bush_Lake/';
 
-% logs with waypoint naviagation
+% May 7 logs with waypoint naviagation 
 %folder = '../python/xbee_bridge/20160507_141654/'; % only one trial here
-folder = '../python/xbee_bridge/20160507_141917/'; % 4x trials in this one, clearly overcorrecting in PID
+%folder = '../python/xbee_bridge/20160507_141917/'; % 4x trials in this one, clearly overcorrecting in PID
 %folder = '../python/xbee_bridge/20160507_143130/'; % one trial here
 %folder = '../python/xbee_bridge/20160507_143254/'; % one trial, does not complete
 %folder = '../python/xbee_bridge/20160507_143407/'; % 2x trial, looks OK but overcorrects
-%folder = '../python/xbee_bridge/20160507_143717/'; % 2x trial, looks good but maybe underdamped alightly 
+folder = '../python/xbee_bridge/20160507_143717/'; % 2x trial, looks good but maybe underdamped alightly. Might be good sysid candidate 
 %folder = '../python/xbee_bridge/20160507_143924/'; % one trial, looks good. I think this is the one where I sent it back into auto mode and it beached itself
-%folder = '../python/xbee_bridge/20160507_144045/'; % one trial, looks good
+%folder = '../python/xbee_bridge/20160507_144045/'; % one trial, looks good, might be sysid candidate
 %folder = '../python/xbee_bridge/20160507_144251/'; % 2x trial, underdamped but gets there
 %folder = '../python/xbee_bridge/20160507_144625/';% 2x trial, definitely underdamped but gets there
 %folder = '../python/xbee_bridge/20160507_144856/';% one trial, meandering not good
 %folder = '../python/xbee_bridge/20160507_145007/';% one trial, didn't get there
-%folder = '../python/xbee_bridge/20160507_145139/';% one trial, looks OK
+%folder = '../python/xbee_bridge/20160507_145139/';% one trial, looks OK, might be sysid candidate
 
 % parse name for handling some earlier files with errors
 foldermonth = str2num(folder(27:28));
