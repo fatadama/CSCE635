@@ -24,8 +24,7 @@ import scipy.integrate
 import struct
 
 # initial GPS state
-# Lake Bryan: 30.709365, -96.468006
-# goal: 30.709318, -96.468051
+# Lake Bryan: 30.710598, -96.468000
 # max length of xbee buffer size
 XBEE_BUFFER_SIZE_MAX = 256
 
@@ -46,8 +45,8 @@ def eqom(x,t,u):
     dx[0]=x[2]*math.cos(x[3])
     dx[1]=x[2]*math.sin(x[3])
     dx[2]=1.030544*x[5]-.271589
-    dx[3]=0.16412*x[4] # ignore the bias for now
-    #dx[3]=0.16412*x[4]-.07814
+    #dx[3]=0.16412*x[4] # ignore the bias for now
+    dx[3]=0.5*x[4]
     dx[4]=10.0*(u[0]-x[4])
     dx[5]=2.5*(u[1]-x[5])
     # enforce limits:
@@ -56,8 +55,8 @@ def eqom(x,t,u):
     return dx
 
 ## Gps home position - purely for convenience
-GPS_HOME_LAT = 30.709365
-GPS_HOME_LON = -96.468006
+GPS_HOME_LAT = 30.710598
+GPS_HOME_LON = -96.468000
 ## GPS standard error (meters)
 SIGMA_GPS = 1.0
 ## GPS velocity error (m/s)
@@ -76,9 +75,9 @@ class emilyEmulator:
         ## serial port parser object
         self.serialParser = esp.espParser()
         # initialize TRUE state: lon (EAST), lat (UP), time, speed, heading (rads)
-        self.truthState.update(GPS_HOME_LON*1.0e7,GPS_HOME_LAT*1.0e7,0.0,0.0,-math.pi*0.75)
+        self.truthState.update(GPS_HOME_LON*1.0e7,GPS_HOME_LAT*1.0e7,0.0,0.0,math.pi*0.25)
         # initialize measured state
-        self.gpsState.update(GPS_HOME_LON*1.0e7,GPS_HOME_LAT*1.0e7,0.0,0.0,-math.pi*0.75)
+        self.gpsState.update(GPS_HOME_LON*1.0e7,GPS_HOME_LAT*1.0e7,0.0,0.0,math.pi*0.25)
         ## true velocity (m/s) and heading (rads)
         self.velstate = np.zeros(2)
         self.velstate[1] = self.gpsState.hdg

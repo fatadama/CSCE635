@@ -8,7 +8,7 @@ import math
 ## 1-sigma standard error in the GPS readings in meters
 sigma_gps = 3.0/3.0# meters, 1-sigma
 ## 1-sigma assumed value for the jerk process noise
-sigma_jerk = 0.5
+sigma_jerk = 0.2
 ## Measurement covariance matrix
 Rkin = np.diag([math.pow(sigma_gps,2.0),math.pow(sigma_gps,2.0)])
 

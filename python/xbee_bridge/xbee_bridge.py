@@ -21,6 +21,8 @@ import os
 from ConfigParser import ConfigParser
 # math for pi
 import math
+# numpy for arrays
+import numpy as np
 
 # hardware interface class
 import hardware_interface
@@ -48,8 +50,10 @@ import ipcPacker
 # @param[in] dw_angle: float, angle (radians) at which synthetic waypoint is generated if dw_interface==True. Not used if dw_interface is False.
 # @param[in] turnThrottle: float, throttle value while turning
 # @param[in] cruiseThrottle: float, throttle value while cruising
+# @param[in] externalWaypoints: bool, load from file if True, else receive from ipc object
+# @param[in] loopWaypoints: bool, loop over the waypoints given (if !externalWaypoints), else stop at the end of the list of current waypoints
 class bridgeProcess():
-    def __init__(self,logDir = '',SIL=True,port='COM4',Kp=0.0,Kd=0.0,Ki=0.0,dw_interface=False,dw_radius=0.0,dw_angle=0.0,turnThrottle=0.3,cruiseThrottle=0.6):
+    def __init__(self,logDir = '',SIL=True,port='COM4',Kp=0.0,Kd=0.0,Ki=0.0,dw_interface=False,dw_radius=0.0,dw_angle=0.0,turnThrottle=0.3,cruiseThrottle=0.6,externalWaypoints=True,loopWaypoints=False):
         # make log folder based on date/time
         foldername=logDir
         ## state object from xbee_bridge_state
@@ -85,6 +89,16 @@ class bridgeProcess():
         self.control = control.control(logDir=foldername,Kp=Kp,Kd=Kd,Ki=Ki,turnThrottle=turnThrottle,cruiseThrottle=cruiseThrottle)
         ## parser object for the serial protocol. Pass the log folder to create message logs
         self.espParser = esp.espParser(logdir=foldername)
+        ## list of waypoints as lat(deg),lon(deg)
+        self.waypoints = np.zeros((1,2))
+        # load from file if setting
+        if not externalWaypoints:
+            # load file
+            self.load_waypoints()
+        ## boolean: use exxternal waypoints from IPC
+        self.externalWaypoints=externalWaypoints
+        ## boolean: loop over list of waypoints if reading from file
+        self.loopWaypoints=loopWaypoints
         ## GPS log file
         self.gpsLog = open(foldername+'gpslog.csv','w')
         self.gpsLog.write('systime,t,lon,lat,v,hdg,status\n')
@@ -129,24 +143,31 @@ class bridgeProcess():
                 # update the synthetic waypoint with the current state
                 self.syntheticWaypoint.update(tNow,self.state.filterState[0],self.state.filterState[1],self.state.filterState[3])
                 # update the reference to the control object
-                #self.control.vectorRef(self.syntheticWaypoint.range,self.syntheticWaypoint.bearing)
-                self.control.vectorRef(self.ipc.v_ref,self.ipc.hdg_ref)
+                self.control.vectorRef(self.syntheticWaypoint.range,self.syntheticWaypoint.bearing)
+                #self.control.vectorRef(self.ipc.v_ref,self.ipc.hdg_ref)
             # call the control object with the current state
             ret = self.control.update(tNow)
             if ret < 0:
-                # create synthetic waypoint from current heading
-                #self.syntheticWaypoint.create(self.dw_radius,self.dw_angle,self.state.filterState[0],self.state.filterState[1],self.state.filterState[3])
+                # load synthetic waypoint from IPC or file
+                if self.externalWaypoints:
+                    # read IPC
+                    print("No IPC waypoints yet; teleoperate")
+                    self.state.control_mode = 0
+                else:
+                    # get the first waypoint in list
+                    print(self.waypoints[0,0])
+                    print(self.waypoints[0,1])
+                    print(self.state.gpsState.lat_home)
+                    print(self.state.gpsState.lon_home)
+                    self.syntheticWaypoint.create_gps(self.waypoints[0,0],self.waypoints[0,1],self.state.gpsState.lat_home,self.state.gpsState.lon_home)
+                    #self.syntheticWaypoint.create(self.dw_radius,self.dw_angle,self.state.filterState[0],self.state.filterState[1],self.state.filterState[3])
                 # create synthetic waypoint at the home lat/lon
-                #self.ipc.writeTarget(tNow,30.709318, -96.468051,-3.0*math.pi/4.0)
-                self.ipc.writeTarget(tNow,30.709218, -96.468151,-3.0*math.pi/4.0)
-                #print("Created waypoint at %g, %g" % (self.syntheticWaypoint.x,self.syntheticWaypoint.y))
-            # check if we're back at home and switch out of mode if we are
-            '''
-            if math.sqrt( math.pow(self.state.filterState[0],2.0)+math.pow(self.state.filterState[1],2.0) ):
-                # set control mode to teleop
+                #self.ipc.writeTarget(tNow,30.709218, -96.468151,-3.0*math.pi/4.0)
+                print("Created waypoint at %g, %g" % (self.syntheticWaypoint.x,self.syntheticWaypoint.y))
+            if ret > 0:
+                # advance to next waypoint, or stop
                 self.state.control_mode = 0
                 print("Goal reached: return to teleoperation mode!")
-            '''
             self.state.rudderCmd=self.control.rudder
             self.state.throttleCmd=self.control.throttle
         self.txBuffer+=esp.pack_control(self.state.rudderCmd,self.state.throttleCmd)
@@ -261,6 +282,26 @@ class bridgeProcess():
     # @param[in] thro the throttle command on [0,1]
     def log_controlOut(self,tNow,rudd,thro):
         self.controlOutLog.write('%.12g,%g,%g\n' % (tNow,rudd,thro))
+    ## load waypoints from file waypoints.txt
+    #
+    # Ignore lines that start with #, they are comments
+    def load_waypoints(self):
+        fin = open('waypoints.txt','r+')
+        k = 0
+        self.waypoints = np.zeros((100,2))
+        for line in fin:
+            if line[0]=='#':
+                continue
+            # else, load values
+            vals = line.split(',')
+            self.waypoints[k,0] = float(vals[0])
+            self.waypoints[k,1] = float(vals[1])
+            k = k+1
+        # remove unused waypoints
+        self.waypoints = self.waypoints[0:k,:]
+        print(self.waypoints)
+
+
 
 ## Class for monitoring and updating the relative position of a synthetic waypoint for hardware testing of EMILY
 #
@@ -295,6 +336,10 @@ class synthetic_waypoint():
         self.y = 0.0
         #self.x = x+rho*math.cos(bearing+hdg)
         #self.y = y+rho*math.sin(bearing+hdg)
+    ## Create a waypoint at lat,lon in degrees
+    def create_gps(self,lat,lon,lat_home,lon_home):
+        self.x = (lat-lat_home)*111318.845 # meters
+        self.y = (lon-lon_home)*111318.845 # meters
     ## After a waypoint is created, compute the range and bearing to it
     def update(self,tNow,x,y,hdg):
         self.range = math.sqrt( math.pow(self.x-x,2.0)+math.pow(self.y-y,2.0) )
@@ -325,6 +370,10 @@ def main():
     turnThrottle = 0.3
     # throttle setting in cruise mode
     cruiseThrottle = 0.6
+    # externalwaypoints: set to True and we use interprocess communication to receive waypoints; else, load from file waypoints.txt
+    externalwaypoints=False
+    # loopwaypoints: set to True and we will loop through the list of waypoints until we get there.
+    loopwaypoints=False
     for item in settings.items('xbee_bridge'):
         if item[0] == 'sil':
             if item[1]=='False':
@@ -362,6 +411,24 @@ def main():
         if item[0] == 'cruisethrottle':
             cruiseThrottle=float(item[1])
             print('Cruising throttle = %f' % (cruiseThrottle))
+        if item[0] == 'loopwaypoints':
+            if item[1]=='True':
+                loopwaypoints=True
+            if item[1]=='False':
+                loopwaypoints=False
+            if loopwaypoints:
+                print("Will loop over waypoints")
+            else:
+                print("Will not loop over waypoints")
+        if item[0] == 'externalwaypoints':
+            if item[1]=='True':
+                externalwaypoints=True
+            if item[1]=='False':
+                externalwaypoints=False
+            if not externalwaypoints:
+                print("Will load external waypoints")
+            else:
+                print("Will not load external waypoints")
     # convert target angle to radians
     debug_waypoint_angle = debug_waypoint_angle*math.pi/180.0
     # make the log directory
@@ -374,7 +441,7 @@ def main():
     settings.write(fsettings)
     print("Wrote settings to file %s" % fsettings.name)
     fsettings.close()
-    process = bridgeProcess(logDir=foldername,SIL=SIL,port=port,Kp=Kp,Kd=Kd,Ki=Ki,dw_interface=debug_pygame_interface,dw_radius=debug_waypoint_radius,dw_angle=debug_waypoint_angle)
+    process = bridgeProcess(logDir=foldername,SIL=SIL,port=port,Kp=Kp,Kd=Kd,Ki=Ki,dw_interface=debug_pygame_interface,dw_radius=debug_waypoint_radius,dw_angle=debug_waypoint_angle,externalWaypoints=externalwaypoints,loopWaypoints=loopwaypoints)
     try:
         while True: # main loop
             process.main_loop()
