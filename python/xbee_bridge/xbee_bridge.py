@@ -99,6 +99,8 @@ class bridgeProcess():
         self.externalWaypoints=externalWaypoints
         ## boolean: loop over list of waypoints if reading from file
         self.loopWaypoints=loopWaypoints
+        ## waypoint counter: count which waypoint in the list we're on
+        self.waypointCounter = 0
         ## GPS log file
         self.gpsLog = open(foldername+'gpslog.csv','w')
         self.gpsLog.write('systime,t,lon,lat,v,hdg,status\n')
@@ -155,10 +157,6 @@ class bridgeProcess():
                     self.state.control_mode = 0
                 else:
                     # get the first waypoint in list
-                    print(self.waypoints[0,0])
-                    print(self.waypoints[0,1])
-                    print(self.state.gpsState.lat_home)
-                    print(self.state.gpsState.lon_home)
                     self.syntheticWaypoint.create_gps(self.waypoints[0,0],self.waypoints[0,1],self.state.gpsState.lat_home,self.state.gpsState.lon_home)
                     #self.syntheticWaypoint.create(self.dw_radius,self.dw_angle,self.state.filterState[0],self.state.filterState[1],self.state.filterState[3])
                 # create synthetic waypoint at the home lat/lon
@@ -166,8 +164,17 @@ class bridgeProcess():
                 print("Created waypoint at %g, %g" % (self.syntheticWaypoint.x,self.syntheticWaypoint.y))
             if ret > 0:
                 # advance to next waypoint, or stop
-                self.state.control_mode = 0
-                print("Goal reached: return to teleoperation mode!")
+                self.waypointCounter=self.waypointCounter+1
+                if self.waypointCounter >= self.waypoints.shape[0]:
+                    if self.loopWaypoints:
+                        self.waypointCounter = 0
+                    else:
+                        self.state.control_mode = 0
+                        print("Goal reached: return to teleoperation mode!")
+                # get the first waypoint in list
+                if self.state.control_mode == 1:
+                    print("Proceeding to waypoint %d/%d" % (self.waypointCounter+1,self.waypoints.shape[0]))
+                    self.syntheticWaypoint.create_gps(self.waypoints[self.waypointCounter,0],self.waypoints[self.waypointCounter,1],self.state.gpsState.lat_home,self.state.gpsState.lon_home)
             self.state.rudderCmd=self.control.rudder
             self.state.throttleCmd=self.control.throttle
         self.txBuffer+=esp.pack_control(self.state.rudderCmd,self.state.throttleCmd)
