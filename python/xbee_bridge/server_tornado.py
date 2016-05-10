@@ -3,25 +3,31 @@ import tornado.websocket
 import tornado.ioloop
 import tornado.web
 import socket
+import ipcPacker
+import sys
 '''
-This is a simple Websocket Echo server that uses the Tornado websocket handler.
-Please run `pip install tornado` with python of version 2.7.9 or greater to install tornado.
-This program will echo back the reverse of whatever it recieves.
-Messages are output to the terminal for debuggin purposes.
+This is a super hacky websocket server that receives from Skywriter and forwards to the xbee bridge over nanomsg, then
+takes nanomsg input from the bridge and forwards the string to Skywriter.
 '''
-
+ipc = ipcPacker.nanomsgClient()
 class WSHandler(tornado.websocket.WebSocketHandler):
+
     def open(self):
         print 'new connection'
 
+    ## We received a message from Matt: forward it to ipc
     def on_message(self, message):
         print 'message received:  %s' % message
-        # Reverse Message and send it back
-        print 'sending back message: %s' % message[::-1]
-        self.write_message(message[::-1])
+        ipc.writeSocks(message)
+        # read from IPC
+        ipc.readSocks()
+        # send anything in the send buffer
+        print 'sending back message: %s' % ipc.msgFromBridge
+        self.write_message(ipc.msgFromBridge)
 
     def on_close(self):
         print 'connection closed'
+        sys.exit()
 
     def check_origin(self, origin):
         return True
