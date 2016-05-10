@@ -221,14 +221,19 @@ class bridgeProcess():
         # Read IPC
         self.ipc.readSocks()
         #   Update control_mode
-        #   If control_mode == pfields
-        #       Update target vector
+        if self.ipc.new_mode:
+            # set the mode value
+            if self.ipc.new_mode_val==0 or self.ipc.new_mode_val==1:
+                self.state.control_mode=self.ipc.new_mode_val
+        # Write IPC
+        ## HACK send a string to Matt
+        self.ipc.writeSocksString('range:%f bearing:%f' % (self.control.rangeRef,self.control.headingRef))
         # If new_data
         if self.new_data:
             # update the state to the control object
             self.control.updateState(self.state.filterState)
             # Write GPS to IPC
-            self.ipc.writeSocks(tNow,self.state.gpsState.lat,self.state.gpsState.lon,self.state.gpsState.v,self.state.gpsState.hdg)
+            #self.ipc.writeSocks(tNow,self.state.gpsState.lat,self.state.gpsState.lon,self.state.gpsState.v,self.state.gpsState.hdg)
             # set flag to false
             self.new_data = False
         return

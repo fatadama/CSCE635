@@ -40,6 +40,8 @@ def ipc_parse_msg(msg):
         return(MSG_SPEED_REF,t,v,hdg)
 ## TODO add other parsing later if needed
 
+
+
 ## Class for interprocess communication
 #
 # Currently only supports talking to the pfields program on a fixed socket
@@ -57,6 +59,10 @@ class nanomsgTalker():
         self.new_ref = False
         ## Time associated with the pfields process
         self.t_ref = 0.0
+        ## New mode message?
+        self.new_mode = False
+        ## new mode to go to
+        self.new_mode_val = 0
     ## Read from IPC sockets
     def readSocks(self):
         # read from pfields Socket
@@ -73,11 +79,19 @@ class nanomsgTalker():
                     self.t_ref = msgout[1]
                     self.v_ref = msgout[2]
                     self.hdg_ref = msgout[3]
+                if msgout[0]==MSG_MODE:
+                    # set values
+                    self.new_mode = True
+                    self.new_mode_val = int(msgout[2])
     ## Write GPS out to sockets
     def writeSocks(self,tNow,lat,lon,v,hdg):
         # Pack GPS message
         msg = ipc_pack_emily_gps(tNow,lat,lon,v,hdg)
         # Write to pfields object
+        nn_wrapper.nn_send(self.sock_pfield, msg, 1)
+    ## HACK send a string over the socket
+    def writeSocksString(self,strin):
+        msg = b'%s' % strin
         nn_wrapper.nn_send(self.sock_pfield, msg, 1)
     ## Write a target position message to the pfields sockets
     #
@@ -85,6 +99,41 @@ class nanomsgTalker():
     def writeTarget(self,tNow,tlat,tlon,thdg):
         msg = ipc_pack_target_gps(tNow,tlat,tlon,thdg)
         nn_wrapper.nn_send(self.sock_pfield, msg, 1)
+    ## Destructor. Stop the nanomsg process
+    def __del__(self):
+        nn_wrapper.nn_term()
+
+## Class for interprocess communication
+#
+# client class that listens to xbee_bridge process
+class nanomsgClient():
+    def __init__(self):
+        ## Socket for IPC with pfields
+        self.sock = nn_wrapper.nn_socket(AF_SP, PAIR)
+        # bind socket
+        nn_wrapper.nn_connect(self.sock, 'ipc://test')
+        ## do we have new data from xbee bridge
+        self.new_data = False
+        ## anything sent FROM the xbee bridge
+        self.msgFromBridge = ''
+    ## Read from IPC sockets and return True if new data
+    def readSocks(self):
+        # read from pfields Socket
+        result = 1
+        # empty the buffer
+        while result > 0:
+            result, buffer = nn_wrapper.nn_recv(self.sock, 1)
+            print("Received %s" % bytes(buffer))
+            if result > 0:
+                self.new_data = True
+                self.msgFromBridge=bytes(buffer)
+        return self.new_data
+    ## Write GPS out to sockets
+    def writeSocks(self,msgIn):
+        # Pack GPS message
+        msg = b'%s' % msgIn
+        # Write to pfields object
+        nn_wrapper.nn_send(self.sock, msg, 1)
     ## Destructor. Stop the nanomsg process
     def __del__(self):
         nn_wrapper.nn_term()
