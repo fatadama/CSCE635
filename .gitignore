@@ -39,3 +39,9 @@ python/gpsParser/*.png
 *.exe
 *.out
 *.app
+
+# Eagle files
+*.b#*
+*.s#*
+*.lck
+*.epf
