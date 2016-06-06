@@ -9,7 +9,10 @@ import sys
 This is a super hacky websocket server that receives from Skywriter and forwards to the xbee bridge over nanomsg, then
 takes nanomsg input from the bridge and forwards the string to Skywriter.
 '''
+
+# global IPC object
 ipc = ipcPacker.nanomsgClient()
+
 class WSHandler(tornado.websocket.WebSocketHandler):
 
     def open(self):

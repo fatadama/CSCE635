@@ -18,9 +18,9 @@ knots2ms = 0.514444;
 %folder = '../python/xbee_bridge/20160507_143130/'; % one trial here
 %folder = '../python/xbee_bridge/20160507_143254/'; % one trial, does not complete
 %folder = '../python/xbee_bridge/20160507_143407/'; % 2x trial, looks OK but overcorrects
-folder = '../python/xbee_bridge/20160507_143717/'; % 2x trial, looks good but maybe underdamped alightly. Might be good sysid candidate 
+%folder = '../python/xbee_bridge/20160507_143717/'; % 2x trial, looks good but maybe underdamped alightly. Might be good sysid candidate 
 %folder = '../python/xbee_bridge/20160507_143924/'; % one trial, looks good. I think this is the one where I sent it back into auto mode and it beached itself
-%folder = '../python/xbee_bridge/20160507_144045/'; % one trial, looks good, might be sysid candidate
+folder = '../python/xbee_bridge/20160507_144045/'; % one trial, looks good, might be sysid candidate
 %folder = '../python/xbee_bridge/20160507_144251/'; % 2x trial, underdamped but gets there
 %folder = '../python/xbee_bridge/20160507_144625/';% 2x trial, definitely underdamped but gets there
 %folder = '../python/xbee_bridge/20160507_144856/';% one trial, meandering not good
@@ -192,5 +192,61 @@ for kcount = 1:length(inbr)
 %     ylabel('Throttle command (normalized)');
 
     set(gcf,'position',figpos);
+
+end
+
+%% figure for write up
+
+figpos2 = [100 300 830 675];
+
+for kcount = 1:length(inbr)
+    %array of indices to use
+    if kcount == 1
+        inu = 1:inbr(kcount);
+    else
+        inu = (inbr(kcount-1)+1):inbr(kcount);
+    end
+    % interpolate gps for this time
+    inr = find ( diff(gps(:,1))==0.0);
+    inp = setdiff(1:length(gps),inr);
+    gps2 = gps(inp,:);
+    gpsi = interp1(gps2(:,1),gps2(:,6),controlObj(inu,1));
+    
+    figure(1+length(inbr)+kcount);
+    clf;
+    
+    subplot(311);
+    plot(controlObj(inu,3),controlObj(inu,2),'r-','linewidth',2);
+    hold on;
+    plot(controlObj(inu(1),3),controlObj(inu(1),2),'ro','linewidth',2,'markersize',6);
+    %quiver(controlObj(inu(1),3),controlObj(inu(1),2),sin(gpsi(1)),cos(gpsi(1)),10,'linewidth',2);
+    %quiver(controlObj(inu,3),controlObj(inu,2),sin(gpsi),cos(gpsi),'linewidth',2);
+    %hold on;
+    % draw where the target should be
+    thet = linspace(-pi,pi,100)';
+    circ = 5.0.*[cos(thet) sin(thet)];
+    %hold on;
+    plot(circ(:,1),circ(:,2),'k--');
+    xlabel('Y (m)');
+    ylabel('X (m)');
+    grid on;
+    axis equal
+    
+    subplot(313);
+    plot(controlObj(inu,1),controlObj(inu,8),'linewidth',2);
+    grid on;
+    ylabel('Rudder (normalized)');
+    
+    subplot(312);
+    % heading error
+    plot(controlObj(inu,1),minAngleErr(controlObj(inu,5),controlObj(inu,7)),'b-','linewidth',2);
+    hold on;
+    plot(controlObj(inu,1),minAngleErr(gpsi,controlObj(inu,7)),'r--');
+    set(gca,'xlim',[controlObj(inu(1),1) controlObj(inu(end),1)]);
+    grid on;
+    ylabel('heading error (rad)');
+    legend('measured-ref','GPS-ref');
+
+    set(gcf,'position',figpos2);
 
 end

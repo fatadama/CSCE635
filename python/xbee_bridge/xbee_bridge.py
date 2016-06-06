@@ -3,7 +3,7 @@ import sys
 # add path to serial protocol
 sys.path.append('../ESP')
 # add path to nanomsg-python
-sys.path.append('../../../nanomsg-python')
+#sys.path.append('../../../nanomsg-python')
 # add path to filter
 sys.path.append('../../../estimation')
 
@@ -23,6 +23,8 @@ from ConfigParser import ConfigParser
 import math
 # numpy for arrays
 import numpy as np
+#shutil for file copy
+import shutil
 
 # hardware interface class
 import hardware_interface
@@ -227,7 +229,9 @@ class bridgeProcess():
                 self.state.control_mode=self.ipc.new_mode_val
         # Write IPC
         ## HACK send a string to Matt
-        self.ipc.writeSocksString('range:%f bearing:%f' % (self.control.rangeRef,self.control.headingRef))
+        # compute the range from home
+        homeRange = math.sqrt( math.pow(self.state.filterState[0],2.0)+math.pow(self.state.filterState[1],2.0) )
+        self.ipc.writeSocksString('range:%8.4g m bearing:%8.4g deg homerange: %8.4g m' % (self.control.rangeRef,self.control.headingRef*180.0/math.pi,homeRange))
         # If new_data
         if self.new_data:
             # update the state to the control object
@@ -448,6 +452,9 @@ def main():
     foldername = ''+('%04d%02d%02d_%02d%02d%02d/' % (dt.year,dt.month,dt.day,dt.hour,dt.minute,dt.second))
     if not os.path.exists(os.path.dirname(foldername)):
         os.makedirs(foldername)
+    # copy the waypoints file to teh foldername where logs go
+    shutil.copyfile('waypoints.txt',foldername+'waypoints.txt')
+    print("Wrote waypoints file copy")
     # copy the settings file to the foldername where logs go
     fsettings = open(foldername+'settings_copy.ini','wt')
     settings.write(fsettings)
