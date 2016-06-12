@@ -1,5 +1,6 @@
 ## @file
-# Parse logs in a directory and determine which have empty control files, i.d. which ones weren't used for automatic control
+# Parse logs in a directory and determine which have empty control files, 
+# i.d. which ones weren't used for automatic control
 
 import sys
 import os

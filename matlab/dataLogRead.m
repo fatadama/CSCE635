@@ -1,76 +1,13 @@
 clear variables;
 close all;
 
+% angle conversion factors
 d2r = pi/180.0;
 r2d = 180.0/pi;
 % conversion factor knots to m/s
 knots2ms = 0.514444;
 
-% load file from location
-%folder = '../python/xbee_bridge/20160506_100753/';
-%folder = '../python/xbee_bridge/20160506_093329/';
-%folder = '../python/xbee_bridge/20160506_094356/';
-%folder = '../python/xbee_bridge/20160430_Bush_Lake/';
-
-% May 7 logs with waypoint naviagation 
-%folder = '../python/xbee_bridge/20160507_141654/'; % only one trial here
-%folder = '../python/xbee_bridge/20160507_141917/'; % 4x trials in this one, clearly overcorrecting in PID
-%folder = '../python/xbee_bridge/20160507_143130/'; % one trial here
-%folder = '../python/xbee_bridge/20160507_143254/'; % one trial, does not complete
-%folder = '../python/xbee_bridge/20160507_143407/'; % 2x trial, looks OK but overcorrects
-%folder = '../python/xbee_bridge/20160507_143717/'; % 2x trial, looks good but maybe underdamped alightly. Might be good sysid candidate 
-%folder = '../python/xbee_bridge/20160507_143924/'; % one trial, looks good. I think this is the one where I sent it back into auto mode and it beached itself
-folder = '../python/xbee_bridge/20160507_144045/'; % one trial, looks good, might be sysid candidate
-%folder = '../python/xbee_bridge/20160507_144251/'; % 2x trial, underdamped but gets there
-%folder = '../python/xbee_bridge/20160507_144625/';% 2x trial, definitely underdamped but gets there
-%folder = '../python/xbee_bridge/20160507_144856/';% one trial, meandering not good
-%folder = '../python/xbee_bridge/20160507_145007/';% one trial, didn't get there
-%folder = '../python/xbee_bridge/20160507_145139/';% one trial, looks OK, might be sysid candidate
-
-% parse name for handling some earlier files with errors
-foldermonth = str2num(folder(27:28));
-folderday = str2num(folder(29:30));
-folderhour = str2num(folder(32:33));
-
-% load bridge log: time, X measured, Y measured, V measured, hdg measured,
-% X est, Y est, VX est, VY est, AX est, AY est, X measured, Y measured, V
-% measured, hdg measured, then covariance 6 x 6 matrix entries
-try
-    bridge = csvread( [folder 'bridgeStateLog.csv'] ,1,0);
-catch err
-    disp(err);%probably the file is empty
-    bridge = nan(1,51);
-end
-% control log:
-% time, rudder, throttle
-control = csvread( [folder 'controlLog.csv'] ,1,0);
-% control object log:
-% time(sec)	x(m)	y(m)	v(m/s)	hdg(rads)	rangeRef(m)	headingRef(rad)	rudder	throttle
-try
-    controlObj = csvread( [folder 'controlObjectLog.csv'] ,1,0);
-catch err
-    disp(err);%probably the file is empty
-    controlObj = nan(1,9);
-end
-% GPS log: systime, gpstime, lon(int), lat(int), speed, heading, status
-gps = csvread([folder 'gpsLog.csv'],1,0);
-% make the gps on -pi, pi for comparison
-gps(:,6) = pi2pi(gps(:,6));
-
-% for these cases, the logged headings are in degrees - convert to radians
-% the velocities are converted from knots to m/s twice
-if foldermonth==5 && folderday==6 && folderhour < 12
-    gps(:,6) = gps(:,6).*d2r;
-    controlObj(:,5)=controlObj(:,5).*d2r;
-    gps(:,5) = gps(:,5)./knots2ms;
-    
-end
-% for this log, the logged headings are converted from degrees to radians
-% twice
-if strcmp(folder, '../python/xbee_bridge/20160430_Bush_Lake/')
-    gps(:,6) = gps(:,6).*r2d;
-    gps(:,5) = gps(:,5)./knots2ms;
-end
+loadData;
 
 %% plot the GPS vel and heading and the corresponding control actions
 
@@ -226,7 +163,13 @@ for kcount = 1:length(inbr)
     thet = linspace(-pi,pi,100)';
     circ = 5.0.*[cos(thet) sin(thet)];
     %hold on;
-    plot(circ(:,1),circ(:,2),'k--');
+    %plot(circ(:,1),circ(:,2),'k--');
+    % draw the synthetic waypoints
+    wps = unique(synWp(:,2:3),'rows');
+    for kin = 1:size(wps,1)
+        plot(wps(kin,2),wps(kin,1),'bx','markersize',6);
+        plot(wps(kin,2)+circ(:,1),wps(kin,1)+circ(:,2),'k--');
+    end
     xlabel('Y (m)');
     ylabel('X (m)');
     grid on;
