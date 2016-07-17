@@ -5218,6 +5218,7 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <wire x1="93.98" y1="53.34" x2="86.36" y2="53.34" width="0.1524" layer="91"/>
 <wire x1="93.98" y1="40.64" x2="99.06" y2="40.64" width="0.1524" layer="91"/>
 <label x="99.06" y="40.64" size="1.778" layer="95"/>
+<junction x="93.98" y="40.64"/>
 </segment>
 <segment>
 <pinref part="GPS1" gate="G$1" pin="1"/>
